@@ -20,7 +20,7 @@ const server =createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin:[process.env.FRONTEND_USER_URL,process.env.FRONTEND_DOCTOR_URL],
+    origin:["https://nexahealth.onrender.com","https://admin-fh8o.onrender.com"],
     methods: ["GET", "POST"],
     credentials: true,
   },
