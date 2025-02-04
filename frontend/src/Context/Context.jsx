@@ -6,7 +6,7 @@ export const Appcontext = createContext();
 
 const Appcontextprovider = (props) => {
   const currencySymbol = "$";
-  const backendurl ="https://backend-1t6i.onrender.com";
+  const backendurl =https://backend-1t6i.onrender.com;
   const [doctors, setdoctors] = useState([]);
   const [token, setToken] = useState(
     localStorage.getItem("token") ? localStorage.getItem("token") : ""
