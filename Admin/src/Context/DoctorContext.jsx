@@ -7,7 +7,7 @@ export const DoctorContext=createContext();
 
 const DoctorContextProvider=(props)=>{
       
-    const backendurl=import.meta.env.VITE_BACKEND_URL;
+    const backendurl="https://backend-1t6i.onrender.com";
     const [dToken, setDToken] = useState(localStorage.getItem('dToken') || '');
     const [appointments, setAppointments] = useState([]);
     const [dashData, setDashData] = useState(false);
