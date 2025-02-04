@@ -8,7 +8,7 @@ const AdminContextProvider = (props) => {
     const [aToken, setaToken] = useState(localStorage.getItem('aToken') || '');
     const [doctors, setdoctors] = useState([]);
     const [appointments, setAppointments] = useState([]);
-    const backendurl = import.meta.env.VITE_BACKEND_URL;
+    const backendurl ="https://backend-1t6i.onrender.com";
     const [dashData, setDashData] = useState(false);
 
     const getalldoctors = async () => {
