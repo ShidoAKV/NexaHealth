@@ -22,8 +22,8 @@ const Navbar = () => {
             <img
               onClick={() => navigate('/home')}
               className="h-10 rounded-md"
-              src='logo
-              alt="logo (2).png"
+              src="logo (2).png"
+              alt="logo"
             />
           </div>
 
