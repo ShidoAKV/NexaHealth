@@ -3,63 +3,61 @@ import { Chat } from "../Models/ChatModel.js";
 import { io } from "../server.js";
  import { getReceiverSocketId } from "../server.js";
 
-const sendChat=async(req,res)=>{
-    const { appointmentId, senderId, receiverId, message } = req.body;
-    try {
-      // Validate if the appointment exists
-      const appointment = await appointmentModel.findById(appointmentId);
-      if (!appointment) {
-        return res.status(404).json({ error: "Appointment not found" });
-      }
+ const sendChat = async (req, res) => {
+  const { senderId, receiverId, message } = req.body;
+  try {
+    const chat =new Chat({
+      senderId,
+      receiverId,
+      message,
+    });
+     await chat.save();
   
-      // Create a new message
-      const newMessage = new Chat({
-        appointmentId,
-        senderId,
-        receiverId,
-        message,
-      });
-  
-      await newMessage.save();
-     
-      const receiverSocketId = getReceiverSocketId(receiverId);
-      console.log('Receiver Socket ID:', receiverSocketId);
-  
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit("newMessage", newMessage);
-        // console.log('Message sent to receiver:', receiverSocketId);
-      } else {
-        console.log('Receiver is not connected.');
-      }
-  
-      res.status(201).json({ success: true, data: newMessage });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-}
+    
 
-const fetchchat=async(req,res)=>{
-    const { appointmentId}=req.body;
-    
-    //  console.log(req.body);
-    
-    try {
-      // Validate if the appointment exists
-      const appointment = await appointmentModel.findById(appointmentId);
-      if (!appointment) {
-        return res.status(404).json({ error: "Appointment not found" });
-      }
-  
-      // Fetch messages for the appointment
-      const messages = await Chat.find({ appointmentId }).sort({ timestamp: 1 });
-  
-      res.status(200).json({ success: true, data: messages });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Internal server error" });
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", {
+        senderId,
+        message,
+        timestamp: new Date(),
+      });
     }
-}
+
+    res.status(200).json({ success: true, data: chat });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
+
+const fetchchat = async (req, res) => {
+  const { senderId, receiverId } = req.body;
+  // console.log({ senderId, receiverId });
+
+  try {
+    const response = await Chat.find({
+      $or: [
+        { senderId: senderId, receiverId: receiverId },
+        { senderId: receiverId, receiverId: senderId }, 
+      ],
+    }).sort({ createdAt: 1 }); 
+
+    if (!response.length) {
+      return res.status(404).json({ success: false, message: "No chat available" });
+    }
+    // console.log(response);
+    
+
+    res.status(200).json({ success: true, data: response });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 
 const deletechat=async(req,res)=>{
    try {

@@ -27,7 +27,7 @@ const Login = () => {
               });
               
 
-          console.log(data);
+          // console.log(data);
          
         if(data.success==='true'){
           localStorage.setItem('aToken',data.token);
@@ -42,7 +42,7 @@ const Login = () => {
           const {data}=await axios.post(backendurl+'/api/doctor/login',{email,password});
           // console.log(data);
            if(data.success===true){
-            console.log(data.token);
+            // console.log(data.token);
             localStorage.setItem('dToken',data.token);
             setDToken(data.token);
             toast.success('Doctor login successfully')

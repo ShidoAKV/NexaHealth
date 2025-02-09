@@ -1,11 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 
 const chatSchema = new mongoose.Schema({
-  appointmentId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "appointmentModel", // Reference to appointmentModel
-    required: true,
-  },
   senderId: {
     type: String,
     required: true,
@@ -15,16 +10,12 @@ const chatSchema = new mongoose.Schema({
     required: true,
   },
   message: {
-    type: String,
+    type:String,
     required: true,
   },
   timestamp: {
     type: Date,
     default: Date.now,
-  },
-  read: {
-    type: Boolean,
-    default: false,
   },
 });
 

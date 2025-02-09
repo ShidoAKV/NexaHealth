@@ -22,7 +22,7 @@ const Navbar = () => {
             <img
               onClick={() => navigate('/home')}
               className="h-10 rounded-md"
-              src={assets.logo}
+              src='logo.png'
               alt="logo"
             />
           </div>
@@ -136,7 +136,7 @@ const Navbar = () => {
             <img
               onClick={() => setShowMenu(false)}
               className="w-6 cursor-pointer"
-              src={assets.cross_icon}
+              src='logo.png'
               alt="close menu"
             />
           </div>

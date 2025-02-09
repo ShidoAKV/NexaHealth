@@ -45,47 +45,110 @@ app.get("/home", (req, res) => {
 
 // Socket.io logic
 
-
 const appointmenttoSocketMap = {};
+const doctorToUsers = {};
+const userToDoctors = {};
 
-// Helper function to get socket ID of the receiver
 const getReceiverSocketId = (receiverId) => {
   return appointmenttoSocketMap[receiverId];
 };
 
-io.on('connection', (socket) => {
-    // console.log('User connected:', socket.id);
+io.on("connection", (socket) => {
+  // On connection, get the IDs from the handshake query.
+  const { userId, docId } = socket.handshake.query;
 
-  const appointmentData = socket.handshake.query;
-
-  if (appointmentData) {
-
-    if (appointmentData.docId) {
-      appointmenttoSocketMap[appointmentData.docId] = socket.id;
-      // console.log(`Mapped Doctor ID: ${appointmentData.docId} to Socket ID: ${socket.id}`);
-    }
-    if (appointmentData.userId) {
-       appointmenttoSocketMap[appointmentData.userId] = socket.id;
-      // console.log(`Mapped User ID: ${appointmentData.userId} to Socket ID: ${socket.id}`);
-    }
-  } else {
-    console.log('No valid appointment data in socket handshake query.');
+  // Save the socket ID by the provided id (only one is sent on connection)
+  if (userId) {
+    appointmenttoSocketMap[userId] = socket.id;
+  }
+  if (docId) {
+    appointmenttoSocketMap[docId] = socket.id;
   }
 
-  // Handle disconnect
-  socket.on('disconnect', () => {
-     console.log('User disconnected:', socket.id);
-    // Remove the socket from the mapping
-    for (const [key, value] of Object.entries(appointmenttoSocketMap)) {
-      if (value === socket.id) {
-        delete appointmenttoSocketMap[key];
-        // console.log(`Removed mapping for ${key}`);
+  // When a chat is registered (client emits "register-chat"), add the pairing.
+  socket.on("register-chat", (data) => {
+    const { userId, docId } = data;
+    if (userId && docId) {
+      // Register the user under this doctor.
+      if (!doctorToUsers[docId]) {
+        doctorToUsers[docId] = new Set();
+      }
+      doctorToUsers[docId].add(userId);
+
+      // Register the doctor under this user.
+      if (!userToDoctors[userId]) {
+        userToDoctors[userId] = new Set();
+      }
+      userToDoctors[userId].add(docId);
+
+      // Broadcast doctor's online status to every user registered with that doctor.
+      if (appointmenttoSocketMap[docId]) {
+        doctorToUsers[docId].forEach((uid) => {
+          if (appointmenttoSocketMap[uid]) {
+            io.to(appointmenttoSocketMap[uid]).emit("status-update", {
+              userId: docId, // indicating the doctor’s id
+              status: "online",
+            });
+          }
+        });
+      }
+
+      // Similarly, broadcast user's online status to every doctor registered with that user.
+      if (appointmenttoSocketMap[userId] && userToDoctors[userId]) {
+        userToDoctors[userId].forEach((did) => {
+          if (appointmenttoSocketMap[did]) {
+            io.to(appointmenttoSocketMap[did]).emit("status-update", {
+              userId: userId, // indicating the user's id
+              status: "online",
+            });
+          }
+        });
+      }
+    }
+  });
+
+  // On disconnect, determine which id is disconnecting and broadcast offline status.
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+    let disconnectedId = null;
+
+    // Find the id (user or doctor) that matches this socket.
+    for (const [id, sId] of Object.entries(appointmenttoSocketMap)) {
+      if (sId === socket.id) {
+        disconnectedId = id;
+        delete appointmenttoSocketMap[id];
         break;
+      }
+    }
+
+    if (disconnectedId) {
+      // If the disconnected id is a doctor, broadcast offline to all paired users.
+      if (doctorToUsers[disconnectedId]) {
+        doctorToUsers[disconnectedId].forEach((uid) => {
+          if (appointmenttoSocketMap[uid]) {
+            io.to(appointmenttoSocketMap[uid]).emit("status-update", {
+              userId: disconnectedId,
+              status: "offline",
+            });
+          }
+        });
+        delete doctorToUsers[disconnectedId];
+      }
+      // If the disconnected id is a user, broadcast offline to all paired doctors.
+      if (userToDoctors[disconnectedId]) {
+        userToDoctors[disconnectedId].forEach((did) => {
+          if (appointmenttoSocketMap[did]) {
+            io.to(appointmenttoSocketMap[did]).emit("status-update", {
+              userId: disconnectedId,
+              status: "offline",
+            });
+          }
+        });
+        delete userToDoctors[disconnectedId];
       }
     }
   });
 });
-
 
 
 

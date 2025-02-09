@@ -1,40 +1,45 @@
 import React, { useState, useEffect, useContext } from "react";
 import { DoctorContext } from "../../Context/DoctorContext";
 import axios from "axios";
-import io from 'socket.io-client';
-import useSound from 'use-sound';
-import ScrollToBottom from 'react-scroll-to-bottom';
+import io from "socket.io-client";
+import useSound from "use-sound";
+import ScrollToBottom from "react-scroll-to-bottom";
 import { useNavigate } from "react-router-dom";
 import { MdOutlineVideoCall } from "react-icons/md";
 
 const DoctorChat = () => {
-
-  const [playSound] = useSound('Notification.mp3');
-  const { getAppointments, appointments, backendurl, dToken, ProfileData } = useContext(DoctorContext);
+  const [playSound] = useSound("Notification.mp3");
+  const {
+    backendurl,
+    dToken,
+    ProfileData,
+    getAppointments,
+    appointments,
+  } = useContext(DoctorContext);
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [message, setMessage] = useState("");
+  const [docmessage, docSetMessage] = useState("");
   const [socket, setSocket] = useState(null);
-  const [hoveredMessage, setHoveredMessage] = useState(null);
-  const [deleteMsg, setdeleteMsg] = useState(false);
-   const navigate=useNavigate();
-
-
+  const [userstatus, setUserstatus] = useState({});
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (dToken && ProfileData?._id) {
+      // Connect with only the doctor's id in the handshake.
       const newSocket = io(backendurl, {
-        query: {
-          docId: ProfileData._id,
-        },
+        query: { docId: ProfileData._id },
       });
 
-      setSocket(newSocket);
+      newSocket.on("status-update", ({ userId, status }) => {
+        console.log({ userId, status });
+        setUserstatus((prev) => ({ ...prev, [userId]: status }));
+      });
 
       newSocket.on("newMessage", (newMessage) => {
         setMessages((prev) => [...prev, newMessage]);
-        playSound();
       });
+
+      setSocket(newSocket);
 
       return () => {
         newSocket.disconnect();
@@ -43,110 +48,84 @@ const DoctorChat = () => {
   }, [backendurl, dToken, ProfileData]);
 
   useEffect(() => {
-    // Fetch appointments on component mount
-    getAppointments();
-  }, [getAppointments]);
+    if (dToken) {
+      getAppointments();
+    }
+  }, [backendurl, dToken]);
 
   useEffect(() => {
-
     if (selectedUser) {
-      // Fetch messages for the selected user
+      // When a patient is selected, register the chat pairing.
+      if (socket) {
+        socket.emit("register-chat", {
+          docId: ProfileData._id,
+          userId: selectedUser._id,
+        });
+      }
       const fetchMessages = async () => {
         try {
           const response = await axios.post(
             `${backendurl}/api/chat/doctor/fetchchat`,
-            { appointmentId: selectedUser._id },
+            { senderId: ProfileData?._id, receiverId: selectedUser?._id },
             { headers: { dToken } }
           );
-
           if (response.data.success) {
             setMessages(response.data.data);
+          } else {
+            setMessages([]);
           }
         } catch (error) {
           console.error("Error fetching messages:", error);
         }
       };
-
       fetchMessages();
+    } else {
+      setMessages([]);
     }
-  }, [selectedUser, backendurl, dToken]);
+  }, [selectedUser, backendurl, dToken, ProfileData, socket]);
 
   const handleSelectUser = (user) => {
     setSelectedUser(user);
-    setMessages([]); // Clear messages for the new user
   };
-
-
 
   const handleSendMessage = async () => {
-    if (message.trim() && selectedUser) {
-      const newMessage = {
-        appointmentId: selectedUser._id,
-        senderId: "doctor",
-        receiverId: selectedUser.userId,
-        message,
-      };
+    if (!docmessage.trim() || !selectedUser) return;
 
-      try {
-        const response = await axios.post(
-          `${backendurl}/api/chat/doctor/send`,
-          newMessage,
-          { headers: { dToken } }
-        );
+    const tempMessage = {
+      _id: Date.now().toString(),
+      senderId: ProfileData._id,
+      receiverId: selectedUser._id,
+      message: docmessage,
+      timestamp: new Date().toISOString(),
+      pending: true,
+    };
 
-        if (response.data.success) {
-          setMessages((prev) => [...prev, response.data.data]); // Append new message
-          setMessage(""); // Clear input field
-        }
-      } catch (error) {
-        console.error("Error sending message:", error);
-      }
-    }
-  };
-  const handleDeleteMessage = async (Id) => {
+    setMessages((prev) => [...prev, tempMessage]);
+
     try {
-      // Optimistic UI Update: Empty the message immediately from the local state (messages)
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg._id === Id ? { ...msg, message: "" } : msg
-        )
-      ); // Empty message locally
+      const { data } = await axios.post(
+        `${backendurl}/api/chat/doctor/send`,
+        tempMessage,
+        { headers: { dToken } }
+      );
 
-      // Emit the event to other clients to update the message in real-time
-      socket.emit('chatDeleted', Id);
-
-      // Make the API call to empty the message in the backend (server)
-      const { data } = await axios.post(`${backendurl}/api/chat/deletechat`, { chatid: Id });
-
-      // If the API call is successful, log success, otherwise rollback the optimistic update
-      if (!data.success) {
-        console.log('Failed to empty message in database, rolling back UI update');
-        setMessages((prevMessages) =>
-          prevMessages.map((msg) =>
-            msg._id === Id ? { ...msg, message: "Error emptying message" } : msg
-          )
-        ); // Rollback if needed
+      if (data.success) {
+        // Replace temp message with actual message from backend
+        setMessages((prev) =>
+          prev.map((msg) => (msg._id === tempMessage._id ? data.data : msg))
+        );
       } else {
-        console.log('Message emptied in database');
+        setMessages([]);
       }
     } catch (error) {
-      console.error('Error emptying message:', error);
-
-      // In case of an error, roll back the optimistic update and show error
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) =>
-          msg._id === Id ? { ...msg, message: "Error emptying message" } : msg
-        )
-      ); // Rollback to restore the message if an error occurs
+      console.error("API Error:", error.response?.data || error.message);
+    } finally {
+      docSetMessage("");
     }
   };
-
-  //  console.log(ProfileData);
-
 
   return (
     <div className="flex h-screen w-screen">
-      {/* Left panel: List of users */}
       <div className="w-1/3 bg-white p-4 border-r border-gray-300">
         <div className="text-xl font-semibold mb-4 text-center text-gray-700">
           My Patients
@@ -160,25 +139,28 @@ const DoctorChat = () => {
                   (a) => a.userData?._id === appointment.userData?._id
                 )
             )
-            .map((appointment) => (
+            .map((user) => (
               <div
-                key={appointment._id}
+                key={user.userData._id}
                 className="p-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSelectUser(appointment)}
+                onClick={() => handleSelectUser(user.userData)}
               >
                 <div className="flex items-center space-x-3">
                   <img
-                    src={appointment.userData?.image || ""}
+                    src={user.userData.image || ""}
                     alt="User"
                     className="w-12 h-12 rounded-full object-cover"
                   />
                   <div className="flex-grow">
-                    <p className="font-medium text-gray-900">
-                      {appointment.userData?.name}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {appointment.userData?.email}
-                    </p>
+                    <p className="font-medium text-gray-900">{user.userData.name}</p>
+                    <p className="text-sm text-gray-600">{user.userData.email}</p>
+                  </div>
+                  <div>
+                    {userstatus[user.userData._id] === "online" ? (
+                      <span className="text-green-500">Online</span>
+                    ) : (
+                      <span className="text-red-500">Offline</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -186,60 +168,47 @@ const DoctorChat = () => {
         </div>
       </div>
 
-      {/* Right panel: Chat UI */}
       <div className="flex-grow bg-gray-50 p-4">
         {selectedUser ? (
           <div className="bg-white shadow-lg rounded-lg p-4 h-full flex flex-col">
             <div className="text-xl font-semibold mb-4 text-center text-gray-700">
-              Chat with {selectedUser.userData?.name}
+              Chat with {selectedUser.name}
             </div>
             <ScrollToBottom className="overflow-y-auto flex-grow p-2 bg-gray-50 border border-gray-300 rounded-md mb-4">
-              {messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`flex ${msg.senderId === "doctor" ? "justify-end" : "justify-start"
-                    } mb-2 relative`}
-                  onMouseEnter={() => setHoveredMessage(index)}
-                  onMouseLeave={() => setHoveredMessage(null)}
-                >
-
-                  {hoveredMessage === index && msg.senderId === ProfileData._id && (
-                    <button
-                      className="absolute top-1 right-4 bg-red-500 text-white text-xs px-2 py-1 rounded-full shadow-md hover:bg-red-600"
-                      onClick={() => {
-                        handleDeleteMessage(msg?._id);
-                        setdeleteMsg(true);
-                      }}
-                    >
-                      Delete
-                    </button>
-                  )}
-
+              {Array.isArray(messages) &&
+                messages.map((msg, index) => (
                   <div
-                    className={`p-3 rounded-lg max-w-xs ${msg.senderId === "doctor"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-300 text-gray-700"
-                      }`}
+                    key={index}
+                    className={`flex items-center mb-2 space-x-2 relative ${
+                      msg.senderId === ProfileData._id ? "justify-end" : "justify-start"
+                    }`}
                   >
-                    <p>{msg.message}</p>
-                    <small className="text-xs text-gray-500">
-                      {new Date(msg.timestamp).toLocaleTimeString()}
-                    </small>
+                    <div
+                      className={`p-3 rounded-lg max-w-xs ${
+                        msg.senderId === ProfileData._id
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-300 text-gray-700"
+                      }`}
+                    >
+                      <p>{msg.message}</p>
+                      <small className="text-xs text-gray-500">
+                        {new Date(msg.timestamp).toLocaleTimeString()}
+                      </small>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </ScrollToBottom>
             <div className="flex items-center border-t pt-2">
               <MdOutlineVideoCall
-                onClick={() => navigate('/doctor-videocall')}
-                className=" h-9 w-8 hover:bg-slate-200 mr-1 rounded-sm cursor-pointer"
+                onClick={() => navigate("/doctor-videocall")}
+                className="h-9 w-8 hover:bg-slate-200 mr-1 rounded-sm cursor-pointer"
               />
               <input
                 type="text"
                 className="flex-grow p-2 border rounded-l-md focus:outline-none"
                 placeholder="Type a message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                value={docmessage}
+                onChange={(e) => docSetMessage(e.target.value)}
               />
               <button
                 onClick={handleSendMessage}
