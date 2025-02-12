@@ -114,16 +114,6 @@ const DoctorContextProvider=(props)=>{
         }
     }, [dToken])
     
-   
-
-    
-
-
-
-
-
-
-
 
     const value={
         dToken,setDToken,backendurl

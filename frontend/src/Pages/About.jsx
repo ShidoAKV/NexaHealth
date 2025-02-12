@@ -2,6 +2,7 @@ import React from 'react'
 import { assets } from '../assets/assets'
 
 const About = () => {
+
   return (
     <div>
       <div className='text-center text-2xl text-gray-500'>
@@ -37,7 +38,6 @@ const About = () => {
           <p>Tailored recommendations and reminders to help you stay on top of your health.</p>
         </div>
       </div>
-
     </div>
   )
 }

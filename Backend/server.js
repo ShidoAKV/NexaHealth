@@ -29,8 +29,9 @@ const io = new Server(server, {
 });
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(cors());
+app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/admin", adminRouter);
@@ -54,10 +55,9 @@ const getReceiverSocketId = (receiverId) => {
 };
 
 io.on("connection", (socket) => {
-  // On connection, get the IDs from the handshake query.
   const { userId, docId } = socket.handshake.query;
 
-  // Save the socket ID by the provided id (only one is sent on connection)
+
   if (userId) {
     appointmenttoSocketMap[userId] = socket.id;
   }
@@ -65,17 +65,16 @@ io.on("connection", (socket) => {
     appointmenttoSocketMap[docId] = socket.id;
   }
 
-  // When a chat is registered (client emits "register-chat"), add the pairing.
   socket.on("register-chat", (data) => {
-    const { userId, docId } = data;
+   
     if (userId && docId) {
-      // Register the user under this doctor.
+
       if (!doctorToUsers[docId]) {
         doctorToUsers[docId] = new Set();
       }
       doctorToUsers[docId].add(userId);
 
-      // Register the doctor under this user.
+  
       if (!userToDoctors[userId]) {
         userToDoctors[userId] = new Set();
       }
@@ -109,7 +108,7 @@ io.on("connection", (socket) => {
 
   // On disconnect, determine which id is disconnecting and broadcast offline status.
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    // console.log("User disconnected:", socket.id);
     let disconnectedId = null;
 
     // Find the id (user or doctor) that matches this socket.

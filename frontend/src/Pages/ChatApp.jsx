@@ -6,6 +6,12 @@ import useSound from "use-sound";
 import ScrollToBottom from "react-scroll-to-bottom";
 import { MdOutlineVideoCall } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
+import { FiPlusCircle } from "react-icons/fi";
+import { IoSend } from "react-icons/io5";
+import { assets } from "../assets/assets";
+import { toast } from "react-toastify";
+import loaderanimation from '/public/loader.json'
+import Lottie from "lottie-react";
 
 const ChatApp = () => {
   const [playSound] = useSound("MessageNotification.mp3");
@@ -17,6 +23,25 @@ const ChatApp = () => {
   const [socket, setSocket] = useState(null);
   const [doctorStatus, setDoctorStatus] = useState({});
   const navigate = useNavigate();
+
+  const [Image, setImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [dataindex, setDataindex] = useState(null);
+
+
+  useEffect(() => {
+    let imagePreviewUrl;
+    if (Image) {
+      imagePreviewUrl = URL.createObjectURL(Image);
+    }
+    return () => {
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
+  }, [Image]);
+
+
 
   useEffect(() => {
     if (token && selectedDoctor?._id && userData?._id) {
@@ -78,13 +103,11 @@ const ChatApp = () => {
             setMessages([]);
           }
         } catch (error) {
-          console.error("Error fetching messages:", error);
+          toast.error(error);
           setMessages([]);
         }
       };
       fetchMessages();
-    } else {
-      setMessages([]);
     }
   }, [backendurl, token, selectedDoctor, userData]);
 
@@ -93,38 +116,84 @@ const ChatApp = () => {
   };
 
   const handleSendMessage = async () => {
-    if (userMessage.trim() && selectedDoctor) {
+    if (userMessage.trim() || Image) {
       try {
-        const newMessage = {
-          senderId: userData?._id,
-          receiverId: selectedDoctor?._id,
-          message: userMessage,
-        };
 
-        const { data } = await axios.post(
-          `${backendurl}/api/chat/user/send`,
-          newMessage,
-          { headers: { token } }
-        );
+        let base64Image = null;
 
-        if (data.success) {
-          setMessages((prev) => [...prev, data.data]);
-          setUserMessage("");
+        if (Image) {
+          setLoading(true);
+          const reader = new FileReader();
+          reader.readAsDataURL(Image);
+          reader.onloadend = async () => {
+            base64Image = reader.result;
+
+            const newMessage = {
+              senderId: userData?._id,
+              receiverId: selectedDoctor?._id,
+              message: userMessage.trim() ? userMessage : "Noimage",
+              image: base64Image,
+            };
+
+            const { data } = await axios.post(
+              `${backendurl}/api/chat/user/send`,
+              newMessage,
+              { headers: { token, "Content-Type": "application/json" } }
+            );
+
+            if (data.success) {
+              setLoading(false);
+              setMessages((prev) => [...prev, data.data]);
+              setImage(null);
+              setUserMessage("");
+            }else{
+              setLoading(false);
+            }
+          }
+        } else {
+          // Send only text message if no image
+          const newMessage = {
+            senderId: userData?._id,
+            receiverId: selectedDoctor?._id,
+            message: userMessage.trim(),
+            image: null
+          };
+
+          const { data } = await axios.post(
+            `${backendurl}/api/chat/user/send`,
+            newMessage,
+            { headers: { token, "Content-Type": "application/json" } }
+          );
+
+          if (data.success) {
+            setMessages((prev) => [...prev, data.data]);
+            setUserMessage("");
+          }
         }
       } catch (error) {
         console.error("Error sending message:", error);
       }
     }
   };
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); 
+      handleSendMessage(); 
+    }
+  };
+
+
+
+
 
   return (
-    <div className="flex h-screen w-screen pr-36">
+    <div className="flex justify-between h-screen w-screen pr-36  top-0 z-50 bg-slate-800   ">
       {/* Left Panel: Appointments */}
-      <div className="w-1/3 bg-white p-4 border-r border-gray-300">
-        <h2 className="text-xl font-semibold mb-4 text-center text-gray-700">
+      <div className="w-[450px] bg-gray-900 p-4 border-r border-gray-300 rounded-md mt-4">
+        <h2 className="text-xl font-semibold mb-4 text-center text-white">
           My Appointments
         </h2>
-        <div className="overflow-y-auto max-h-full">
+        <div className="overflow-y-auto max-h-full  ">
           {appointments
             .filter(
               (appointment, index, self) =>
@@ -134,7 +203,7 @@ const ChatApp = () => {
             .map((doc) => (
               <div
                 key={doc.docData._id}
-                className="p-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100"
+                className="p-3 border-b border-gray-200 cursor-pointer hover:bg-gray-800"
                 onClick={() => handleSelectDoctor(doc.docData)}
               >
                 <div className="flex items-center space-x-3">
@@ -144,15 +213,15 @@ const ChatApp = () => {
                     className="w-12 h-12 rounded-full object-cover"
                   />
                   <div className="flex-grow">
-                    <p className="font-medium text-gray-900">{doc.docData?.name}</p>
-                    <p className="text-sm text-gray-600">{doc.docData?.speciality}</p>
+                    <p className="font-medium text-gray-300">{doc.docData?.name}</p>
+                    <p className="text-sm text-gray-400">{doc.docData?.speciality}</p>
                   </div>
-                  <span>click for<strong>online</strong> status</span>
+                  <span className="text-gray-400">click for<strong className="text-gray-400">online</strong> status</span>
                   <div>
                     {doctorStatus[doc.docData._id] === "online" ? (
-                      <span className="text-green-500">Online</span>
+                      <span className="text-green-600">Online</span>
                     ) : (
-                      <span className="text-red-500">Offline</span>
+                      <span className="text-red-700">Offline</span>
                     )}
                   </div>
                 </div>
@@ -162,58 +231,128 @@ const ChatApp = () => {
       </div>
 
       {/* Right Panel: Chat Interface */}
-      <div className="flex-grow bg-gray-50 p-4">
+
+      <div className="flex-grow bg-slate-800 p-4 h-full">
         {selectedDoctor ? (
-          <div className="bg-white shadow-lg rounded-lg p-4 h-full flex flex-col">
-            <h2 className="text-xl font-semibold mb-4 text-center text-gray-700">
+          <div className="bg-gray-900 shadow-lg rounded-lg p-4 h-full flex flex-col">
+            <h2 className="text-xl font-semibold mb-4 text-center text-white">
               Chat with {selectedDoctor.name}
             </h2>
-            <ScrollToBottom className="overflow-y-auto flex-grow p-2 bg-gray-50 border border-gray-300 rounded-md mb-4">
+            <ScrollToBottom className="overflow-y-auto flex-grow p-2 bg-gray-700 border border-gray-400 rounded-md mb-4">
               {Array.isArray(messages) &&
                 messages.map((msg, index) => (
                   <div
                     key={index}
-                    className={`flex items-center mb-2 space-x-2 relative ${
-                      msg.senderId === userData._id ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`p-3 rounded-lg max-w-xs ${
-                        msg.senderId === userData._id
-                          ? "bg-blue-500 text-white"
-                          : "bg-gray-300 text-gray-700"
+                    className={`flex items-center mb-2 space-x-2 relative ${msg.senderId === userData._id ? "justify-end" : "justify-start"
                       }`}
-                    >
-                      <p>{msg.message}</p>
-                      <small className="text-xs text-gray-500">
-                        {new Date(msg.timestamp).toLocaleTimeString()}
-                      </small>
-                    </div>
+                  >
+                    {
+                      msg.senderId !== userData._id &&
+                      <img
+                        className="w-8 h-8 rounded-full object-cover "
+                        src={selectedDoctor.image}
+                        alt="Doctor"
+                      />
+                    }
+                    {
+                      msg.senderId == userData._id &&
+                      <img
+                        className="w-8 h-8 rounded-full object-cover "
+                        src={userData.image}
+                        alt="Doctor"
+                      />
+                    }
+                    {
+                     (msg.message) && (msg.message !== 'Noimage')
+                      &&
+                      <div className={`p-3 rounded-lg max-w-xs ${msg.senderId === userData._id
+                        ? "bg-gray-900 text-white"
+                        : "bg-gray-300 text-gray-900"
+                        }`}
+                      >
+                        <p>{msg.message}</p>
+                        <small className="text-xs text-gray-500">
+                          {new Date(msg.timestamp).toLocaleTimeString()}
+                        </small>
+                      </div>}
+
+                     {msg.image && (
+                      <div
+                        className="relative flex flex-row-reverse"
+                        onMouseEnter={() => setDataindex(index)}
+                        onMouseLeave={() => setDataindex(null)}
+                      >
+                        <img
+                          src={msg.image}
+                          alt="Sent image"
+                          className="w-40 h-auto rounded-lg mt-2"
+                        />
+                        {dataindex === index && (
+                          <button
+                            className="absolute bottom-2 right-2 bg-black text-white h-8 w-20 cursor-pointer text-center rounded-md"
+                            onClick={()=>window.open(msg.image)}
+                          >
+                            Download
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                   </div>
+
                 ))}
+
+              {loading &&
+                <Lottie
+                  className="w-48 h-40 justify-self-end"
+                  animationData={loaderanimation}
+                  loop={true} />
+              }
             </ScrollToBottom>
-            <div className="flex items-center border-t pt-2">
+
+            <div className="flex items-center border-t pt-2 bg-gray-900 p-2 rounded-md">
+
               <MdOutlineVideoCall
                 onClick={() => navigate("/videocall")}
-                className="h-9 w-8 hover:bg-slate-200 mr-1 rounded-sm cursor-pointer"
+                className="h-9 w-10 mx-1 text-gray-300 hover:bg-gray-700 p-1 rounded-sm cursor-pointer"
               />
-              <input
-                type="text"
-                className="flex-grow p-2 border rounded-l-md focus:outline-none"
-                placeholder="Type a message"
-                value={userMessage}
-                onChange={(e) => setUserMessage(e.target.value)}
-              />
+
+              <div className="flex justify-between w-full bg-gray-800 rounded-md px-2 py-1">
+
+                <label htmlFor="file-upload">
+                  <FiPlusCircle className="h-9 w-8 text-gray-300 hover:bg-gray-700 p-1 rounded-md cursor-pointer" />
+                </label>
+                <input
+                  type="file"
+                  id="file-upload"
+                  hidden
+                  onChange={(e) => setImage(e.target.files[0])}
+                />
+                <img
+                  className={`w-8 h-10 overflow-hidden rounded ${Image ? 'opacity-75' : 'opacity-0'}`}
+                  src={Image ? URL.createObjectURL(Image) : assets.upload_icon}
+                  alt="Profile Preview"
+                />
+                <input
+                  type="text"
+                  className="flex-grow p-2 bg-transparent text-white border-none focus:outline-none"
+                  placeholder="Type a message"
+                  value={userMessage}
+                  onChange={(e) => setUserMessage(e.target.value)}
+                  onKeyDown={(e) => handleKeyPress(e)}
+                />
+              </div>
+
               <button
                 onClick={handleSendMessage}
-                className="bg-green-500 text-white p-2 rounded-r-md hover:bg-green-600 transition"
+                className="bg-green-500 text-white p-2 ml-2 rounded-md hover:bg-green-600 transition"
               >
-                Send
+                <IoSend className="w-5 h-5" />
               </button>
             </div>
           </div>
         ) : (
-          <div className="flex justify-center items-center h-full text-gray-600">
+          <div className="flex justify-center items-center h-full text-gray-300">
             <p>Select a doctor to start chatting.</p>
           </div>
         )}
@@ -222,4 +361,4 @@ const ChatApp = () => {
   );
 };
 
-export default ChatApp;
+export default React.memo(ChatApp);

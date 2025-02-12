@@ -14,7 +14,7 @@ const Navbar = () => {
     localStorage.removeItem('token');
   }
   return (
-    <nav className="w-full bg-white shadow-md">
+    <nav className="w-full bg-white shadow-md ">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -132,11 +132,11 @@ const Navbar = () => {
       {showMenu && (
         <div className="fixed inset-0 bg-white z-20 md:hidden">
           <div className="flex items-center justify-between p-4 border-b">
-            <img className="h-8" src={assets.logo} alt="logo" />
+          <img className="h-8" src='logo.png' alt="logo" />
             <img
               onClick={() => setShowMenu(false)}
-              className="w-6 cursor-pointer"
-              src='logo.png'
+              className="w-10 h-8 cursor-pointer"
+              src={assets.cross_icon}
               alt="close menu"
             />
           </div>

@@ -17,6 +17,9 @@ const chatSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  image:{
+    type:String,
+  }
 });
 
 export const Chat = mongoose.model("Chat", chatSchema);
