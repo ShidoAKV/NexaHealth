@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react';
 import { Routes,Route} from 'react-router-dom';
 import Homes from './Pages/Homes';
 import Doctor from './Pages/Doctor';
@@ -9,7 +9,7 @@ import Myprofile from './Pages/Myprofile';
 import Myappoinment from './Pages/Myappoinment';
 import Apointment from './Pages/Apointment';
 import Navbar from './Components/Navbar';
-import Footer from './Components/Footer';
+// import Footer from './Components/Footer';
 import { ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ChatApp from './Pages/ChatApp';

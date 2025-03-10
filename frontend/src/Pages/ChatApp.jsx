@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { Appcontext } from "../Context/Context";
 import axios from "axios";
 import io from "socket.io-client";
-import useSound from "use-sound";
+// import useSound from "use-sound";
 import ScrollToBottom from "react-scroll-to-bottom";
 import { MdOutlineVideoCall } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
@@ -14,13 +14,13 @@ import loaderanimation from '/public/loader.json'
 import Lottie from "lottie-react";
 
 const ChatApp = () => {
-  const [playSound] = useSound("MessageNotification.mp3");
+  // const [playSound] = useSound("MessageNotification.mp3");
   const { backendurl, token, userData } = useContext(Appcontext);
   const [appointments, setAppointments] = useState([]);
   const [messages, setMessages] = useState([]);
   const [userMessage, setUserMessage] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [socket, setSocket] = useState(null);
+  // const [socket, setSocket] = useState(null);
   const [doctorStatus, setDoctorStatus] = useState({});
   const navigate = useNavigate();
 
@@ -62,7 +62,7 @@ const ChatApp = () => {
         docId: selectedDoctor._id,
       });
 
-      setSocket(newSocket);
+      // setSocket(newSocket);
 
       return () => {
         newSocket.disconnect();
@@ -347,7 +347,7 @@ const ChatApp = () => {
                 onClick={handleSendMessage}
                 className="bg-green-500 text-white p-2 ml-2 rounded-md hover:bg-green-600 transition"
               >
-                <IoSend className="w-5 h-5" />
+                <IoSend className="w-6 h-6" />
               </button>
             </div>
           </div>

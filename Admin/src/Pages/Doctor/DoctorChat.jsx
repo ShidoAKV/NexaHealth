@@ -157,7 +157,6 @@ const DoctorChat = () => {
           timestamp: new Date().toISOString(),
           image: null,
         };
-        setMessages((prev) => [...prev, tempMessage]);
         const { data } = await axios.post(
           `${backendurl}/api/chat/doctor/send`,
           tempMessage,
@@ -336,7 +335,7 @@ const DoctorChat = () => {
                 />
                 <input
                   type="text"
-                  className="flex-grow p-2 bg-transparent text-white border-none focus:outline-none"
+                  className="flex-grow  p-2 bg-transparent text-white border-none focus:outline-none"
                   placeholder="Type a message"
                   value={docmessage}
                   onChange={(e) => docSetMessage(e.target.value)}
@@ -348,7 +347,7 @@ const DoctorChat = () => {
                 onClick={handleSendMessage}
                 className="bg-green-500 text-white p-2 ml-2 rounded-md hover:bg-green-600 transition"
               >
-                <IoSend className="w-5 h-5" />
+                <IoSend className="w-6 h-6" />
               </button>
             </div>
           </div>
