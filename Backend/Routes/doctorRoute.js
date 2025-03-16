@@ -1,5 +1,5 @@
 import express from "express";
-import { appointmentCancel, appointmentComplete, appointmentsDoctor, doctorDashboard, doctorList, doctorProfile, loginDoctor, updateDoctorProfile } from "../Controllers/doctorController.js";
+import { appointmentCancel, appointmentComplete, appointmentsDoctor, doctorDashboard, doctorList, doctorProfile, generateForm, loginDoctor, updateDoctorProfile } from "../Controllers/doctorController.js";
 import authDoctor from "../Middlewares/authDoctor.js";
 
 const doctorRouter=express.Router();
@@ -12,6 +12,9 @@ doctorRouter.post('/cancel-appointment',authDoctor,appointmentCancel);
 doctorRouter.get('/dashboard',authDoctor,doctorDashboard);
 doctorRouter.get('/profile',authDoctor,doctorProfile);
 doctorRouter.post('/update-profile',authDoctor,updateDoctorProfile);
+doctorRouter.post('/generate-form',generateForm);
+
+
 
 
 

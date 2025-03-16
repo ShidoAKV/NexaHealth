@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import  { useContext } from 'react';
 import { AdminContext } from '../Context/AdminContext';
 import { NavLink } from 'react-router-dom';
 import { assets } from '../../../frontend/src/assets/assets';
@@ -71,6 +71,7 @@ const Sidebar = () => {
                         />
                         <p>Doctor List</p>
                     </NavLink>
+
                 </ul>
             )}
 
@@ -138,6 +139,22 @@ const Sidebar = () => {
                             className="h-5 w-5"
                         />
                         <p>Chat</p>
+                    </NavLink>
+
+                    <NavLink
+                        to="/doctor-generate-form"
+                        className={({ isActive }) =>
+                            `flex items-center gap-3 px-6 py-4 hover:bg-blue-50 hover:text-blue-600 transition ${
+                                isActive ? 'bg-blue-100 text-blue-600 border-r-4 border-blue-600' : ''
+                            }`
+                        }
+                    >
+                        <img
+                            src={assets.arrow_icon}
+                            alt="Doctor List Icon"
+                            className="h-5 w-5"
+                        />
+                        <p>Medical Form</p>
                     </NavLink>
                 </ul>
             )}

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { DoctorContext } from "../../Context/DoctorContext";
 import axios from "axios";
 import io from "socket.io-client";
-import useSound from "use-sound";
+// import useSound from "use-sound";
 import ScrollToBottom from "react-scroll-to-bottom";
 import { useNavigate } from "react-router-dom";
 import { MdOutlineVideoCall } from "react-icons/md";
@@ -15,7 +15,7 @@ import {toast} from 'react-toastify'
 
 
 const DoctorChat = () => {
-  const [playSound] = useSound("Notification.mp3");
+  // const [playSound] = useSound("Notification.mp3");
   const {
     backendurl,
     dToken,

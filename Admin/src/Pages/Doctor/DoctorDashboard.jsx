@@ -7,8 +7,9 @@ import { AppContext } from '../../Context/AppContext.jsx';
 
 const DoctorDashboard = () => {
 
-    const { dToken, dashData, setDashData, getDashData,completeAppointment,cancelAppointment } = useContext(DoctorContext);
+    const { dToken, dashData, getDashData,completeAppointment,cancelAppointment } = useContext(DoctorContext);
     const { currency } = useContext(AppContext);
+    
     useEffect(() => {
         if (dToken) {
             getDashData();

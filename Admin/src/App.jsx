@@ -1,4 +1,4 @@
-import React, { useContext } from 'react'
+import { useContext } from 'react'
 import Login from './Pages/Login.jsx'
 import { ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -16,6 +16,7 @@ import DoctorAppointment from './Pages/Doctor/DoctorAppointment.jsx';
 import DoctorProfile from './Pages/Doctor/DoctorProfile.jsx';
 import DoctorChat from './Pages/Doctor/DoctorChat.jsx';
 import Videocall from './Pages/Doctor/Videocall.jsx';
+import DoctorMedicalForm from './Pages/Doctor/DoctorMedicalForm.jsx';
 
 const App = () => {
 
@@ -47,6 +48,7 @@ const {dToken}=useContext(DoctorContext);
               <Route path='/doctor-profile' element={<DoctorProfile />} />
               <Route path='/doctor-chat' element={<DoctorChat/>} />
               <Route path='/doctor-videocall' element={<Videocall/>} />
+              <Route path='/doctor-generate-form' element={<DoctorMedicalForm/>} />
             </>
           )}
       </Routes>
