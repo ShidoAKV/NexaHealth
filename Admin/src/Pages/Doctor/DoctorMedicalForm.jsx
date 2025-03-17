@@ -1,4 +1,4 @@
-import  { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -25,11 +25,12 @@ const DoctorMedicalForm = () => {
     register,
     handleSubmit,
     watch,
-    formState: { errors },
-  } = useForm({ resolver: yupResolver(schema) });
-   
 
-  const pdfRef = useRef(); 
+    formState: { errors, isSubmitting },
+  } = useForm({ resolver: yupResolver(schema) });
+
+
+  const pdfRef = useRef();
 
   const onSubmit = async (data) => {
     try {
@@ -40,34 +41,46 @@ const DoctorMedicalForm = () => {
         toast.error(response.data.message);
       }
     } catch (error) {
-      toast.error("Error sending prescription",error);
+      toast.error("Error sending prescription", error);
     }
   };
   const [loading, setLoading] = useState(false);
 
   const handleDownload = () => {
-    
-        setTimeout(() => {
-            html2canvas(pdfRef.current, { scale: 2 }).then((canvas) => {
-                const imgData = canvas.toDataURL("image/png");
-                const pdf = new jsPDF("p", "mm", "a4");
-                pdf.addImage(imgData, "PNG", 10, 10, 190, 250);
-                pdf.save(`prescription.pdf`);
-            });
-            setLoading(false);
-        
-        }, 3000);
-        
- } 
-   
-  
+
+    setTimeout(() => {
+      html2canvas(pdfRef.current, {
+        scale: 2,
+        ignoreElements: (element) => element.classList.contains("loader"),
+
+      }).then((canvas) => {
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jsPDF({
+          format: "a4"
+        });
+        console.log(pdf);
+
+        const imageProperties = pdf.getImageProperties(imgData);
+        const pdfwidth = pdf.internal.pageSize.getWidth();
+        const pdfheight = (imageProperties.height * pdfwidth) / (imageProperties.width);
+
+        pdf.addImage(imgData, "PNG", 10, 10, pdfheight, pdfwidth);
+        pdf.save(`prescription.pdf`);
+      });
+      setLoading(false);
+
+    }, 3000);
+
+  }
+
+
 
   return (
     <div className="flex justify-between h-screen w-full gap-1 bg-black">
       {/* FORM SECTION */}
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="w-full mx-3 my-3  px-5 py-5 border rounded-lg bg-blue-900 bg-opacity-60 overflow-scroll"
+        className="w-full mx-3 my-3  px-5 py-5 border rounded-lg bg-blue-900 bg-opacity-60 overflow-scroll no-scrollbar"
       >
         <h1 className="text-center text-2xl text-slate-300">Prescription Form</h1>
 
@@ -91,7 +104,7 @@ const DoctorMedicalForm = () => {
 
         <div>
           <label className="text-slate-300">Medicines & Dosage:</label>
-          <textarea {...register("medicines")} className="border p-2 w-full rounded-md" />
+          <textarea {...register("medicines")} className="border p-2 w-full rounded-md no-scrollbar" />
           <p className="text-red-500">{errors.medicines?.message}</p>
         </div>
 
@@ -112,38 +125,57 @@ const DoctorMedicalForm = () => {
           <p className="text-red-500">{errors.email?.message}</p>
         </div>
 
-        <button type="submit" className="bg-blue-500 text-white p-2 mt-4 rounded hover:bg-blue-600">
-          Send
+        <button type="submit"
+          className="bg-blue-500 text-white p-2 mt-4 rounded hover:bg-blue-600"
+          disabled={isSubmitting}
+
+        >
+          {isSubmitting ? 'Sending' : 'Send'}
         </button>
       </form>
 
       {/* PRESCRIPTION PREVIEW */}
-      <div className="bg-blue-950 w-3/4 p-4 rounded-lg">
-        <div ref={pdfRef} className="h-[500px] w-[550px] bg-slate-200 rounded-md mx-10 my-9 p-4 overflow-scroll">
+
+      <div className="bg-blue-950 w-3/4 p-4 rounded-lg mx-3 my-3 border-[1.5px] border-white">
+        <div
+          ref={pdfRef}
+          className="max-h-[500px] w-[500px] bg-white rounded-md mx-10 my-9 p-4 overflow-y-auto no-scrollbar flex flex-col gap-4"
+        >
           <div className="flex justify-end">
-            <img className="cursor-pointer h-10 w-10" 
-             src={Downloadicon} 
-             alt="Download PDF" 
-             onClick={()=>{
-             setLoading(true);
-             handleDownload();
-             }} />
+            <img
+              className="cursor-pointer h-10 w-10 downloadicon"
+              src={Downloadicon}
+              alt="Download PDF"
+              onClick={() => {
+                setLoading(true);
+                handleDownload();
+              }}
+            />
           </div>
-          <div className={`flex flex-col gap-4  blur-${loading?'2xl':'none'}`} >
+
+          {loading && (
+            <Lottie className="w-72 h-72 z-50 mx-auto" animationData={loaderanimation} loop={true} />
+          )}
+
+          <div className={`flex flex-col gap-4 ${loading ? "blur-2xl" : ""} break-words max-w-full`}>
             <strong className="text-center text-xl">Medical Prescription</strong>
-            {loading &&
-                <Lottie
-                  className="w-72 h-72 z-50 ml-28 "
-                  animationData={loaderanimation}
-                  loop={true} />
-              }
-            {<p><strong>Patient Name:</strong> {watch("patientName") || "__________"}</p>}
-            <p><strong>Doctor Name:</strong> Dr. {watch("doctorName") || "__________"}</p>
-            <p><strong>Diagnosis:</strong> {watch("diagnosis") || "__________"}</p>
+
+            <p>
+              <strong>Patient Name:</strong> {watch("patientName") || "__________"}
+            </p>
+            <p>
+              <strong>Doctor Name:</strong> Dr. {watch("doctorName") || "__________"}
+            </p>
+
+            <p>
+              <strong>Diagnosis:</strong> {watch("diagnosis") || "__________"}
+            </p>
             <h1 className="font-bold">Medicines: {watch("medicines") || "__________"}</h1>
             <h1 className="font-bold text-red-600">Instructions:</h1>
-            <p>"{watch("instructions") || "_______________"}"</p>
-            <p><strong>Date:</strong> {watch("date") ? new Date(watch("date")).toDateString() : "__________"}</p>
+            <p className="break-words max-w-full">"{watch("instructions") || "_______________"}"</p>
+            <p>
+              <strong>Date:</strong> {watch("date") ? new Date(watch("date")).toDateString() : "__________"}
+            </p>
 
             <div className="text-center">
               <p>Regards</p>
@@ -152,15 +184,17 @@ const DoctorMedicalForm = () => {
           </div>
         </div>
 
-        <button onClick={
-            ()=>{
+        <button
+          onClick={() => {
             setLoading(true);
             handleDownload();
-            }
-            }  className="bg-blue-600 text-white p-2 rounded hover:bg-blue-800 ml-10">
+          }}
+          className="bg-blue-600 text-white p-2 rounded hover:bg-blue-800 ml-10"
+        >
           Download
         </button>
       </div>
+
     </div>
   );
 };

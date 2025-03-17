@@ -271,6 +271,10 @@ const generateForm = async (req, res) => {
                 table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                 th, td { border: 1px solid black; padding: 8px; text-align: left; }
                 th { background-color: #f2f2f2; }
+                #instruction{
+                 text-color:'red'
+                }
+
             </style>
         </head>
         <body>
@@ -282,10 +286,10 @@ const generateForm = async (req, res) => {
             <h2>Medicines</h2>
             <p>${req.body.medicines.replace(/\n/g, "<br>")}</p> <!-- Convert newlines to HTML line breaks -->
             
-            <h2>Instructions</h2>
+            <h2 id="instruction">Instructions</h2>
             <p>${req.body.instructions || "No special instructions"}</p>
     
-            <p><strong>Date:</strong> ${new Date(req.body.date).toDateString()}</p>
+            <p ><strong>Date:</strong> ${new Date(req.body.date).toDateString()}</p>
             <br>
             <p style="text-align: center;">Regards,</p>
             <p style="text-align: center;"><strong>NexaHealth Team</strong></p>
