@@ -141,7 +141,7 @@ const DoctorMedicalForm = () => {
           ref={pdfRef}
           className="max-h-[500px] w-[500px] bg-white rounded-md mx-10 my-9 p-4 overflow-y-auto no-scrollbar flex flex-col gap-4"
         >
-          <div className="flex justify-end">
+          <div className="flex justify-end loader">
             <img
               className="cursor-pointer h-10 w-10 downloadicon"
               src={Downloadicon}
@@ -151,11 +151,12 @@ const DoctorMedicalForm = () => {
                 handleDownload();
               }}
             />
+             {loading && (
+            <Lottie className="w-72 h-72 z-50 mx-auto" animationData={loaderanimation} loop={true} />
+             )}
           </div>
 
-          {loading && (
-            <Lottie className="w-72 h-72 z-50 mx-auto" animationData={loaderanimation} loop={true} />
-          )}
+         
 
           <div className={`flex flex-col gap-4 ${loading ? "blur-2xl" : ""} break-words max-w-full`}>
             <strong className="text-center text-xl">Medical Prescription</strong>
