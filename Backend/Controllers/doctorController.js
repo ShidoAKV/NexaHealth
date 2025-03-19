@@ -6,7 +6,7 @@ import { FormModel } from "../Models/FormModel.js";
 import nodemailer from 'nodemailer';
 import validator from 'validator';
 import pdf from 'html-pdf';
-
+ import fs from 'fs';
 const changeAvailability = async (req, res) => {
     try {
         const { docId } = req.body;
@@ -242,7 +242,9 @@ const updateDoctorProfile = async (req, res) => {
 const generateForm = async (req, res) => {
     try {
         const formdata = new FormModel(req.body);
-
+          
+        
+        
         if (!validator.isEmail(formdata.email)) {
             return res.status(400).json({ success: false, message: "Invalid Email" });
         }
@@ -271,10 +273,7 @@ const generateForm = async (req, res) => {
                 table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                 th, td { border: 1px solid black; padding: 8px; text-align: left; }
                 th { background-color: #f2f2f2; }
-                #instruction{
-                 text-color:'red'
-                }
-
+                #instruction { color: red; }
             </style>
         </head>
         <body>
@@ -289,56 +288,63 @@ const generateForm = async (req, res) => {
             <h2 id="instruction">Instructions</h2>
             <p>${req.body.instructions || "No special instructions"}</p>
     
-            <p ><strong>Date:</strong> ${new Date(req.body.date).toDateString()}</p>
+            <p><strong>Date:</strong> ${new Date(req.body.date).toDateString()}</p>
             <br>
             <p style="text-align: center;">Regards,</p>
             <p style="text-align: center;"><strong>NexaHealth Team</strong></p>
         </body>
         </html>
-    `;
+        `;
 
         const pdfPath = "prescription-content.pdf";
-
-
-
-        pdf.create(emailHtml, { format: "A4" }).toFile(pdfPath, async (err) => {
-            if (err){
-                return res.json({ success: false, message: "Error generating PDF" });
-            }
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: req.body.email,
-                subject: "Your Medical Prescription",
-                text: "Please find your attached medical prescription PDF.",
-                attachments: [
-                    {
-                        filename: "prescription-content.pdf",
-                        path: pdfPath,
-                    },
-                ],
-            };
-    
-            
-            transporter.sendMail(mailOptions, (error, info) => {
-                fs.unlinkSync(pdfPath); 
-                
-                if (error) {
-                    return res.status(500).json({ success: false, message: "Email sending failed" });
+        
+       
+       
+           pdf.create(emailHtml, { format: "A4" }).toFile(pdfPath, async(err) => {
+                if (err){ 
+                    return res.status(500).json({ success: false, message: "pdf generation error" });
                 }
-
-                return res.json({ success: true, message: "Email sent successfully!", info });
             });
-        });
-
-         return  res.json({ success: true, message: "Email sent successfully!" });
-
+         
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: req.body.email,
+            subject: "Your Medical Prescription",
+            text: "Please find your attached medical prescription PDF.",
+            attachments: [{ filename: "prescription-content.pdf", path: pdfPath }],
+        };
 
        
-       
+       const sendresponse=await transporter.sendMail(mailOptions);
+        //  console.log(sendresponse.accepted);
+       const response=sendresponse.accepted.filter((data)=>data===req.body.email);
+       if(response){
+        fs.unlinkSync(pdfPath);
+        return res.status(200).json({ success: true, message: "Email sent successfully!" });
+       }else{
+        return res.status(500).json({ success: false, message: "email not sended" });
+       }
+         
+        
+
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
+
+const getmessagehistory=async(req,res)=>{
+     try {
+        const data=await FormModel.find();
+       
+        return res.json({success:true,message:data});
+         
+     } catch (error) {
+         return res.json({success:false,error});
+     }
+}
+
+
 
 
 
@@ -349,5 +355,5 @@ export {
     changeAvailability, doctorList, loginDoctor,
     appointmentsDoctor, appointmentComplete,
     appointmentCancel, doctorDashboard, doctorProfile
-    , updateDoctorProfile, generateForm
+    , updateDoctorProfile, generateForm,getmessagehistory
 };

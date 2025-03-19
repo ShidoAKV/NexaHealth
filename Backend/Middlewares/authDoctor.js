@@ -7,8 +7,6 @@ const authDoctor=async (req,res,next)=>{
         // header se sirf token name se bhej rhe hai token
       const {dtoken}=req.headers;
         //  console.log(req.headers);
-        
-        
       if(!dtoken){
         return  res.json({success:false,message:"Not Authorised login again"});
       }

@@ -25,7 +25,6 @@ const DoctorMedicalForm = () => {
     register,
     handleSubmit,
     watch,
-
     formState: { errors, isSubmitting },
   } = useForm({ resolver: yupResolver(schema) });
 
@@ -34,14 +33,15 @@ const DoctorMedicalForm = () => {
 
   const onSubmit = async (data) => {
     try {
-      const response = await axios.post("http://localhost:7000/api/doctor/generate-form", data);
+      const response = await axios.post("http://localhost:7000/api/doctor/generate-form",
+        data
+      );
+    
       if (response.data.success) {
         toast.success("Prescription sent successfully");
-      } else {
-        toast.error(response.data.message);
       }
     } catch (error) {
-      toast.error("Error sending prescription", error);
+        toast.error(error.response.data.message);
     }
   };
   const [loading, setLoading] = useState(false);
@@ -58,7 +58,7 @@ const DoctorMedicalForm = () => {
         const pdf = new jsPDF({
           format: "a4"
         });
-        console.log(pdf);
+        // console.log(pdf);
 
         const imageProperties = pdf.getImageProperties(imgData);
         const pdfwidth = pdf.internal.pageSize.getWidth();
@@ -76,17 +76,19 @@ const DoctorMedicalForm = () => {
 
 
   return (
-    <div className="flex justify-between h-screen w-full gap-1 bg-black">
+    <div className="flex flex-col md:flex-row md:justify-between h-auto md:h-screen w-full gap-4 bg-black p-4">
       {/* FORM SECTION */}
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="w-full mx-3 my-3  px-5 py-5 border rounded-lg bg-blue-900 bg-opacity-60 overflow-scroll no-scrollbar"
+        className="w-full md:w-1/2 mx-auto px-5 py-5 border rounded-lg bg-blue-900 bg-opacity-60 overflow-scroll no-scrollbar"
       >
-        <h1 className="text-center text-2xl text-slate-300">Prescription Form</h1>
+        <h1 className="text-center text-2xl text-slate-300 mb-4">
+          Prescription Form
+        </h1>
 
         <div>
           <label className="text-slate-300">Patient Name:</label>
-          <input {...register("patientName")} className="border p-3  w-full rounded-md" />
+          <input {...register("patientName")} className="border p-3 w-full rounded-md" />
           <p className="text-red-500">{errors.patientName?.message}</p>
         </div>
 
@@ -125,21 +127,20 @@ const DoctorMedicalForm = () => {
           <p className="text-red-500">{errors.email?.message}</p>
         </div>
 
-        <button type="submit"
-          className="bg-blue-500 text-white p-2 mt-4 rounded hover:bg-blue-600"
+        <button
+          type="submit"
+          className="bg-blue-500 text-white p-2 mt-4 rounded hover:bg-blue-600 w-full"
           disabled={isSubmitting}
-
         >
-          {isSubmitting ? 'Sending' : 'Send'}
+          {isSubmitting ? "Sending" : "Send"}
         </button>
       </form>
 
       {/* PRESCRIPTION PREVIEW */}
-
-      <div className="bg-blue-950 w-3/4 p-4 rounded-lg mx-3 my-3 border-[1.5px] border-white">
+      <div className="bg-blue-950 w-full md:w-1/2 p-4 rounded-lg border-[1.5px] border-white">
         <div
           ref={pdfRef}
-          className="max-h-[500px] w-[500px] bg-white rounded-md mx-10 my-9 p-4 overflow-y-auto no-scrollbar flex flex-col gap-4"
+          className="max-h-[550px] w-full  md:w-auto bg-white rounded-md mx-auto my-4 p-4 overflow-y-auto no-scrollbar flex flex-col gap-4"
         >
           <div className="flex justify-end loader">
             <img
@@ -151,12 +152,10 @@ const DoctorMedicalForm = () => {
                 handleDownload();
               }}
             />
-             {loading && (
-            <Lottie className="w-72 h-72 z-50 mx-auto" animationData={loaderanimation} loop={true} />
-             )}
+            {loading && (
+              <Lottie className="w-72 h-72 z-50 mx-auto" animationData={loaderanimation} loop={true} />
+            )}
           </div>
-
-         
 
           <div className={`flex flex-col gap-4 ${loading ? "blur-2xl" : ""} break-words max-w-full`}>
             <strong className="text-center text-xl">Medical Prescription</strong>
@@ -167,13 +166,14 @@ const DoctorMedicalForm = () => {
             <p>
               <strong>Doctor Name:</strong> Dr. {watch("doctorName") || "__________"}
             </p>
-
             <p>
               <strong>Diagnosis:</strong> {watch("diagnosis") || "__________"}
             </p>
             <h1 className="font-bold">Medicines: {watch("medicines") || "__________"}</h1>
             <h1 className="font-bold text-red-600">Instructions:</h1>
-            <p className="break-words max-w-full">"{watch("instructions") || "_______________"}"</p>
+            <p className="break-words max-w-full">
+              {`"`}{watch("instructions") || "_______________"}{`"`}
+            </p>
             <p>
               <strong>Date:</strong> {watch("date") ? new Date(watch("date")).toDateString() : "__________"}
             </p>
@@ -190,13 +190,14 @@ const DoctorMedicalForm = () => {
             setLoading(true);
             handleDownload();
           }}
-          className="bg-blue-600 text-white p-2 rounded hover:bg-blue-800 ml-10"
+          className="bg-blue-600 text-white p-2 rounded hover:bg-blue-800  w-full md:w-40    "
         >
           Download
         </button>
       </div>
-
     </div>
+
+
   );
 };
 

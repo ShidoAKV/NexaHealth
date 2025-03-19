@@ -156,6 +156,21 @@ const Sidebar = () => {
                         />
                         <p>Medical Form</p>
                     </NavLink>
+                    <NavLink
+                        to="/doctor-message-history"
+                        className={({ isActive }) =>
+                            `flex items-center gap-3 px-6 py-4 hover:bg-blue-50 hover:text-blue-600 transition ${
+                                isActive ? 'bg-blue-100 text-blue-600 border-r-4 border-blue-600' : ''
+                            }`
+                        }
+                    >
+                        <img
+                            src={assets.arrow_icon}
+                            alt="Doctor List Icon"
+                            className="h-5 w-5"
+                        />
+                        <p>Message History </p>
+                    </NavLink>
                 </ul>
             )}
         </div>

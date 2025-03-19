@@ -3,6 +3,10 @@ import { Appcontext } from '../Context/Context';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import askai from '../assets/Ask-Ai.png';
+// import Lottie from 'lottie-react';
+// import Aianimation from '../assets/Animation.json';
+
 // import { BiMessageAltAdd } from "react-icons/bi";
 const MyAppointment = () => {
   const navigate = useNavigate();
@@ -50,22 +54,22 @@ const MyAppointment = () => {
 
   const initPay = (order) => {
     //     RAZORPAY_KEY_ID="rzp_test_nxSF77arxy9gvB"
-   
+
     const options = {
       key: import.meta.env.VITE_RAZORPAY_KEY_ID,
       amount: order.amount,
       currency: order.currency,
       name: 'Appointment Payment',
       description: 'Appointment payment',
-      order_id:order.id,
+      order_id: order.id,
       receipt: order.receipt,
       handler: async (response) => {
-        console.log(response,'response hai bhai')
+        console.log(response, 'response hai bhai')
         try {
-          
-          const { data } =await axios.post(backendurl + '/api/user/verifyRazorpay',response, { headers: { token } })
-          console.log(data,'verfifyRazorpay')
-          
+
+          const { data } = await axios.post(backendurl + '/api/user/verifyRazorpay', response, { headers: { token } })
+          console.log(data, 'verfifyRazorpay')
+
           if (data.success) {
             getUserAppointments();
             navigate('/my-appointments')
@@ -91,13 +95,13 @@ const MyAppointment = () => {
 
     try {
       const { data } = await axios.post(backendurl + '/api/user/payment-razorpay', { appointmentId }, { headers: { token } });
-     
+
       if (data.success) {
-          // console.log(data);
-        
-         console.log(data.order);
-        
-         initPay(data.order);
+        // console.log(data);
+
+        console.log(data.order);
+
+        initPay(data.order);
       }
 
     } catch (error) {
@@ -119,7 +123,7 @@ const MyAppointment = () => {
 
 
 
-return (
+  return (
     <div className='flex'>
       <div className="max-w-2xl mx-auto p-4">
         <p className="bg-blue-500 pb-3 pl-3 pt-1 mt-8 font-semibold text-lg text-white rounded-sm border-2 border-blue-600">
@@ -138,7 +142,7 @@ return (
                   alt="Doctor"
                 />
               </div>
-  
+
               <div className="flex-grow">
                 <p className="text-base font-medium text-gray-900">{items.docData.name}</p>
                 <p className="text-sm text-gray-600">{items.docData.speciality}</p>
@@ -149,14 +153,14 @@ return (
                   <span className="font-semibold text-gray-700">Date & Time:</span>{items.slotDate} | {items.slotTime}
                 </p>
               </div>
-  
+
               <div className="flex flex-col sm:items-end gap-2 mt-4 sm:mt-0">
                 {!items.cancelled && items.payment && !items.isCompleted && (
                   <button className="ml-2 pr-12 px-4 py-2 shadow-sm shadow-white bg-green-500 text-black rounded font-medium text-sm hover:bg-green-600 hover:text-white transition">
                     <p className="pl-5">Paid</p>
                   </button>
                 )}
-  
+
                 {!items.cancelled && !items.payment && !items.isCompleted && (
                   <button
                     onClick={() => appointmentRazorpay(items._id)}
@@ -178,7 +182,7 @@ return (
                     Cancel
                   </button>
                 )}
-  
+
                 {items.cancelled && !items.isCompleted && (
                   <button
                     style={{ width: '100%' }}
@@ -187,7 +191,7 @@ return (
                     Appointment Cancelled
                   </button>
                 )}
-  
+
                 {items.isCompleted && (
                   <button className="flex pl-6 pr-6 py-2 shadow-sm shadow-green-500 bg-white text-black rounded font-medium text-sm hover:bg-green-600 hover:text-white transition">
                     Completed
@@ -198,9 +202,10 @@ return (
           ))}
         </div>
       </div>
-  
-      <button
-        onClick={()=>navigate('/doctor-chat')}
+
+     <div className='flex justify-end h'>
+     <button
+        onClick={() => navigate('/doctor-chat')}
         className="fixed bottom-8 right-8 p-3 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600"
         style={{
           fontSize: '24px',
@@ -209,10 +214,27 @@ return (
           justifyContent: 'center',
         }}
       >
-        <span>💬</span>
-      </button>
+      <span>💬</span>
+       </button>
+
+       <button
+        onClick={() => navigate('/ai-assistance')}
+        className="fixed w-40  bottom-28 right-2 p-3 text-white"
+        style={{
+          fontSize: '40px',
+        }}
+      >
+        <img src={askai} className='w-40 h-24 ml-4 hover:scale-105 hover:ease-out hover:transition-all 2s ' alt="" />
+         {/* <Lottie
+        className="w-20  justify-self-end"
+        animationData={Aianimation}
+        loop={true} /> */}
+       </button>
+     </div>
+    
+
     </div>
   );
 };
-  
-export default MyAppointment;
+
+export default React.memo(MyAppointment);

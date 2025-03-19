@@ -14,10 +14,12 @@ import { ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ChatApp from './Pages/ChatApp';
 import VideoApp from './Pages/VideoApp';
+import Assistance from './Pages/Assistance';
 
 const App = () => {
   return (
     <div className='mx-4 sm:mx-[10%]'>
+
       <ToastContainer/>
       <Navbar/>
       <Routes>
@@ -33,9 +35,14 @@ const App = () => {
         <Route path='/appointment/:docId' element={<Apointment />} />
         <Route path='/doctor-chat' element={<ChatApp />} />
         <Route path='/videocall' element={<VideoApp/>} />
+        <Route path='/ai-assistance' element={<Assistance/>} />
+        
       </Routes>
       {/* <Footer/> */}
+
+      
     </div>
+    
   );
 };
 

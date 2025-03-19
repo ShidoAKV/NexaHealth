@@ -1,5 +1,5 @@
-import React, { useContext } from 'react';
-import { assets } from '../../../frontend/src/assets/assets.js';
+import { useContext } from 'react';
+// import { assets } from '../../../frontend/src/assets/assets.js';
 import { AdminContext } from '../Context/AdminContext';
 import { useNavigate } from 'react-router-dom';
 import { DoctorContext } from '../Context/DoctorContext.jsx';

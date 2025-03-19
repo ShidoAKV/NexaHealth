@@ -17,6 +17,7 @@ import DoctorProfile from './Pages/Doctor/DoctorProfile.jsx';
 import DoctorChat from './Pages/Doctor/DoctorChat.jsx';
 import Videocall from './Pages/Doctor/Videocall.jsx';
 import DoctorMedicalForm from './Pages/Doctor/DoctorMedicalForm.jsx';
+import DoctorMessageHistory from './Pages/Doctor/DoctorMessageHistory.jsx';
 
 const App = () => {
 
@@ -49,6 +50,7 @@ const {dToken}=useContext(DoctorContext);
               <Route path='/doctor-chat' element={<DoctorChat/>} />
               <Route path='/doctor-videocall' element={<Videocall/>} />
               <Route path='/doctor-generate-form' element={<DoctorMedicalForm/>} />
+              <Route path='/doctor-message-history' element={<DoctorMessageHistory/>} />
             </>
           )}
       </Routes>

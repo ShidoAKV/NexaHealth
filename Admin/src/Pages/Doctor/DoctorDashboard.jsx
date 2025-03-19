@@ -1,4 +1,3 @@
-import React from 'react'
 import { useContext } from 'react'
 import { DoctorContext } from '../../Context/DoctorContext.jsx'
 import { useEffect } from 'react';
@@ -14,7 +13,7 @@ const DoctorDashboard = () => {
         if (dToken) {
             getDashData();
         }
-    }, [dToken])
+    }, [dToken,getDashData])
 
     return dashData && (
         <div className='m-5'>
