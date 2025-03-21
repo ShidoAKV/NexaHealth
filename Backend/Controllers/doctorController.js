@@ -6,7 +6,9 @@ import { FormModel } from "../Models/FormModel.js";
 import nodemailer from 'nodemailer';
 import validator from 'validator';
 import pdf from 'html-pdf';
- import fs from 'fs';
+import { v2 as cloudinary } from 'cloudinary';
+
+
 const changeAvailability = async (req, res) => {
     try {
         const { docId } = req.body;
@@ -236,33 +238,20 @@ const updateDoctorProfile = async (req, res) => {
 }
 
 
-
-// medical-form data logic
-
 const generateForm = async (req, res) => {
     try {
-        const formdata = new FormModel(req.body);
-          
-        
-        
-        if (!validator.isEmail(formdata.email)) {
+        const { email, patientName, doctorName, diagnosis, medicines, instructions } = req.body;
+
+        if (!validator.isEmail(email)) {
             return res.status(400).json({ success: false, message: "Invalid Email" });
         }
 
-        const form = await formdata.save();
-        if (!form) {
-            return res.status(500).json({ success: false, message: "Form error" });
+        let patientRecord = await FormModel.findOne({ email });
+
+        if (!patientRecord) {
+            patientRecord = new FormModel({ patientName, doctorName, email, messages: [] });
         }
 
-        const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
-
-        // Generate HTML content for the PDF
         const emailHtml = `
         <html>
         <head>
@@ -278,82 +267,143 @@ const generateForm = async (req, res) => {
         </head>
         <body>
             <h1>Medical Prescription</h1>
-            <p><strong>Patient Name:</strong> ${req.body.patientName}</p>
-            <p><strong>Doctor Name:</strong> Dr. ${req.body.doctorName}</p>
-            <p><strong>Diagnosis:</strong> ${req.body.diagnosis}</p>
-            
+            <p><strong>Patient Name:</strong> ${patientName}</p>
+            <p><strong>Doctor Name:</strong> Dr. ${doctorName}</p>
+            <p><strong>Diagnosis:</strong> ${diagnosis}</p>
             <h2>Medicines</h2>
-            <p>${req.body.medicines.replace(/\n/g, "<br>")}</p> <!-- Convert newlines to HTML line breaks -->
-            
+            <p>${medicines.replace(/\n/g, "<br>")}</p>
             <h2 id="instruction">Instructions</h2>
-            <p>${req.body.instructions || "No special instructions"}</p>
-    
-            <p><strong>Date:</strong> ${new Date(req.body.date).toDateString()}</p>
+            <p>${instructions || "No special instructions"}</p>
+            <p><strong>Date:</strong> ${new Date().toDateString()}</p>
             <br>
             <p style="text-align: center;">Regards,</p>
             <p style="text-align: center;"><strong>NexaHealth Team</strong></p>
         </body>
-        </html>
-        `;
+        </html>`;
 
-        const pdfPath = "prescription-content.pdf";
         
-       
-       
-           pdf.create(emailHtml, { format: "A4" }).toFile(pdfPath, async(err) => {
-                if (err){ 
-                    return res.status(500).json({ success: false, message: "pdf generation error" });
-                }
+        const pdfBuffer = await new Promise((resolve, reject) => {
+            pdf.create(emailHtml, { format: "A4" }).toBuffer((err, buffer) => {
+                if (err) reject(err);
+                else resolve(buffer);
             });
-         
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: req.body.email,
-            subject: "Your Medical Prescription",
-            text: "Please find your attached medical prescription PDF.",
-            attachments: [{ filename: "prescription-content.pdf", path: pdfPath }],
+        });
+
+       
+        const pdfUrl = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                { resource_type: "auto", 
+                  folder: "prescriptions",
+                   format: "pdf",
+                   public_id: `prescription-${Date.now()}`, 
+                   type:'upload',
+                   access_mode: "public"
+                 },
+                (error, result) => {
+                    if (error) {
+                        reject("Cloudinary upload failed");
+                    } else {
+                        resolve(result.secure_url);
+                    }
+                }
+            );
+            uploadStream.end(pdfBuffer);
+        });
+
+        if (!pdfUrl) {
+            return res.status(500).json({ success: false, message: "Failed to upload PDF to Cloudinary" });
+        }
+
+        
+        const newMessage = {
+            diagnosis,
+            medicines,
+            instructions,
+            date: new Date(),
+            pdfPath: pdfUrl,
+            notes:'',
         };
 
-       
-       const sendresponse=await transporter.sendMail(mailOptions);
-        //  console.log(sendresponse.accepted);
-       const response=sendresponse.accepted.filter((data)=>data===req.body.email);
-       if(response){
-        fs.unlinkSync(pdfPath);
-        return res.status(200).json({ success: true, message: "Email sent successfully!" });
-       }else{
-        return res.status(500).json({ success: false, message: "email not sended" });
-       }
-         
-        
+        patientRecord.messages.push(newMessage);
+        await patientRecord.save();
 
+       
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: "Your Medical Prescription",
+            text: "Please find attached your medical prescription.",
+            attachments: [
+                {
+                    filename: `prescription.pdf`,
+                    content: pdfBuffer, 
+                },
+            ],
+        };
+
+        const sendResponse = await transporter.sendMail(mailOptions);
+
+        if (sendResponse.accepted.includes(email)) {
+            return res.status(200).json({ success: true, message: "Email sent successfully!", pdfUrl });
+        } else {
+            return res.status(500).json({ success: false, message: "Email not sent" });
+        }
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
 
 
-const getmessagehistory=async(req,res)=>{
-     try {
-        const data=await FormModel.find();
-       
-        return res.json({success:true,message:data});
-         
-     } catch (error) {
-         return res.json({success:false,error});
-     }
+const getmessagehistory = async (req, res) => {
+    try {
+        const data = await FormModel.find();
+
+        return res.json({ success: true, message: data });
+
+    } catch (error) {
+        return res.json({ success: false, error });
+    }
 }
 
-
-
-
-
-
-
+const Editnote = async (req, res) => {
+    try {
+      const { data, formid, messageid } = req.body;
+      
+      const validformdata = await FormModel.findById(formid);
+      if (!validformdata) {
+        return res.json({ success: false, message: 'No valid Appointment found' });
+      }
+  
+      const messageIndex = validformdata.messages.findIndex(msg => msg._id.toString() === messageid);
+  
+      if (messageIndex === -1) {
+        return res.json({ success: false, message: 'Message not found' });
+      }
+  
+      validformdata.messages[messageIndex].notes = data;
+  
+      await validformdata.save();
+  
+      return res.json({ success: true, message: 'Note added successfully' });
+  
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    }
+  };
+  
 
 export {
     changeAvailability, doctorList, loginDoctor,
     appointmentsDoctor, appointmentComplete,
     appointmentCancel, doctorDashboard, doctorProfile
-    , updateDoctorProfile, generateForm,getmessagehistory
+    , updateDoctorProfile, generateForm, getmessagehistory,Editnote
 };

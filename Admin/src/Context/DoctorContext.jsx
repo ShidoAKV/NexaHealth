@@ -112,7 +112,6 @@ const DoctorContextProvider = (props) => {
         try {
             const { data } = await axios.get(backendurl + '/api/doctor/message-history',
                 {headers:{dToken}},
-               
             );
             if (data.success) {
                setMessagedata(data.message);

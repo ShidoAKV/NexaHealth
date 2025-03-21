@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useContext } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -9,6 +9,7 @@ import html2canvas from "html2canvas";
 import Downloadicon from "../../assets/Downloadicon.png";
 import loaderanimation from "/public/loader.json";
 import Lottie from "lottie-react";
+import { DoctorContext } from "../../Context/DoctorContext";
 
 const schema = yup.object().shape({
   patientName: yup.string().required("Patient name is required"),
@@ -21,6 +22,7 @@ const schema = yup.object().shape({
 });
 
 const DoctorMedicalForm = () => {
+
   const {
     register,
     handleSubmit,
@@ -28,15 +30,17 @@ const DoctorMedicalForm = () => {
     formState: { errors, isSubmitting },
   } = useForm({ resolver: yupResolver(schema) });
 
+ const {backendurl}=useContext(DoctorContext);
 
   const pdfRef = useRef();
 
   const onSubmit = async (data) => {
     try {
-      const response = await axios.post("http://localhost:7000/api/doctor/generate-form",
+      const response = await axios.post(backendurl+"/api/doctor/generate-form",
         data
       );
-    
+      console.log(response);
+      
       if (response.data.success) {
         toast.success("Prescription sent successfully");
       }
@@ -161,9 +165,9 @@ const DoctorMedicalForm = () => {
             <strong className="text-center text-xl">Medical Prescription</strong>
 
             <p>
-              <strong>Patient Name:</strong> {watch("patientName") || "__________"}
+              <strong >Patient Name:</strong> {watch("patientName") || "__________"}
             </p>
-            <p>
+            <p className="break-words max-w-full">
               <strong>Doctor Name:</strong> Dr. {watch("doctorName") || "__________"}
             </p>
             <p>
