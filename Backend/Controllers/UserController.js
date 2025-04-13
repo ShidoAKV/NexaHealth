@@ -6,7 +6,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { doctorModel } from '../Models/Doctormodel.js';
 import { appointmentModel } from '../Models/AppointmentModel.js';
 import razorpay from 'razorpay';
-
+import { GoogleGenerativeAI } from '@google/generative-ai'; 
 /*
  Api for user to register,payment,profile change,login etc
 */
@@ -360,10 +360,34 @@ const verifyRazorpay = async (req, res) => {
 };
 
 
+const AssistanceResponse=async(req,res)=>{
+      try {
+          const {prompt}=req.body;
+          
+          const genAI = new GoogleGenerativeAI(process.env.API_KEY);
+
+           const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+ 
+           const {response}=await model.generateContent(prompt);
+           
+           if(!response){
+            return res.json({success:false,message:'Error in generating the response'})
+           }
+
+           return res.json({success:true,response:response.text()});
+
+
+
+
+      } catch (error) {
+        
+      }
+}
+
 
 
 export {
   registerUser, loginUser, getProfile,
   updateProfile, bookAppointment, listAppointment,
-  cancelAppointment, paymentRazorpay,verifyRazorpay,
+  cancelAppointment, paymentRazorpay,verifyRazorpay,AssistanceResponse
 };

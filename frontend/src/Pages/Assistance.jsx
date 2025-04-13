@@ -1,3 +1,5 @@
+import { useContext, useState } from 'react';
+import ScrollToBottom from 'react-scroll-to-bottom';
 import gptLogo from '../assets/chatgpt.svg';
 import sendBtn from '../assets/send.svg';
 import userIcon from '../assets/user-icon.png';
@@ -7,8 +9,44 @@ import msgIcon from '../assets/message.svg';
 import homeIcon from '../assets/home.svg';
 import savedIcon from '../assets/bookmark.svg';
 import rocketIcon from '../assets/rocket.svg';
+import axios from 'axios';
+import { Appcontext } from '../Context/Context';
+import { toast } from 'react-toastify';
 
 const Assistance = () => {
+  const [messages, setMessages] = useState([
+    { sender: 'user', text: 'Hello, how can I help you?' },
+    { sender: 'gpt', text: 'I am here to assist you. Ask me anything!' }
+  ]);
+  const [input, setInput] = useState('');
+
+  const {backendurl,token}=useContext(Appcontext);
+   
+   
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    setMessages(prev => [...prev, { sender: 'user', text: input }]);
+
+    try {
+      // Make request to backend
+      const {data} = await axios.post(`${backendurl}/api/user/assistance-response`, 
+        {prompt:input}
+      ,{headers:{token}});
+      
+       if(data.success){
+        setMessages(prev => [...prev, { sender: 'user', text: input }, { sender: 'gpt', text: data.response }]);
+       }
+    
+    } catch (error) {
+       toast.error(error)
+    }
+
+    setInput('');
+  };
+
+  
+
   return (
     <div className="flex h-screen bg-black/85 text-white">
       {/* Sidebar */}
@@ -43,25 +81,42 @@ const Assistance = () => {
           </button>
         </div>
       </div>
+
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full">
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="flex items-start gap-2 mb-4">
-            <img src={userIcon} alt="User" className="w-8 h-8" />
-            <p className="bg-blue-500 p-3 rounded-lg max-w-lg">Hello, how can I help you?</p>
-          </div>
-          <div className="flex items-start gap-2 mb-4">
-            <img src={gptImgLogo} alt="AI" className="w-8 h-8" />
-            <p className="bg-gray-700 p-3 rounded-lg max-w-lg">I am here to assist you. Ask me anything!</p>
-          </div>
-        </div>
+        {/* Scrollable chat messages */}
+        <ScrollToBottom className="flex-1 overflow-y-auto p-4">
+          {messages.map((msg, index) => (
+            <div key={index} className="flex items-start gap-2 mb-4">
+              <img
+                src={msg.sender === 'user' ? userIcon : gptImgLogo}
+                alt={msg.sender}
+                className="w-8 h-8"
+              />
+              <p
+                className={`p-3 rounded-lg max-w-lg ${
+                  msg.sender === 'user' ? 'bg-blue-500' : 'bg-gray-700'
+                }`}
+              >
+                {msg.text}
+              </p>
+            </div>
+          ))}
+        </ScrollToBottom>
+
+        {/* Input box */}
         <div className="p-4 border-t border-gray-700 flex items-center">
           <input
             type="text"
             className="flex-1 p-2 bg-gray-800 rounded-lg outline-none text-white"
             placeholder="Send a message..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
           />
-          <button className="ml-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600">
+          <button
+            className="ml-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600"
+            onClick={()=>handleSend()}
+          >
             <img src={sendBtn} alt="Send" className="w-6 h-6" />
           </button>
         </div>

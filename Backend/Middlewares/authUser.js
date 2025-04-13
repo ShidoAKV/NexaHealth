@@ -6,7 +6,6 @@ const authUser=async (req,res,next)=>{
     try {
         // header se sirf token name se bhej rhe hai token
       const {token}=req.headers;
-        //  console.log(req.headers);
         
         
       if(!token){
