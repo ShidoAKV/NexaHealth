@@ -359,29 +359,98 @@ const verifyRazorpay = async (req, res) => {
   }
 };
 
+const genAI = new GoogleGenerativeAI(process.env.API_KEY);
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 const AssistanceResponse=async(req,res)=>{
-      try {
-          const {prompt}=req.body;
-          
-          const genAI = new GoogleGenerativeAI(process.env.API_KEY);
 
-           const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
- 
-           const {response}=await model.generateContent(prompt);
-           
-           if(!response){
-            return res.json({success:false,message:'Error in generating the response'})
-           }
+  try {
+   
+    const { prompt: rawText, limit = 5 } = req.body;
+    if (!rawText || typeof rawText !== 'string') {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Please send your symptoms as text.' });
+    }
 
-           return res.json({success:true,response:response.text()});
+    
+    const doctors = await doctorModel.find({})
+      .limit(50)  
+      .lean();
+    if (!doctors.length) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'No doctors available.' });
+    }
 
+  
+    const doctorProfiles = doctors.map(d => ({
+      name:      d.name,
+      specialty: d.speciality,  
+      about:       d.about|| ''
+    }));
 
+     
+    
+    const compositePrompt = `
+      You are a clinical assistant.
+      A patient has written the following:
 
+      "${rawText}"
 
-      } catch (error) {
-        
-      }
+      First, extract the patient's symptoms and put them into a JSON array under the key "symptoms".
+      Then, from the list of doctors below, select the top ${limit} specialists best suited to treat these symptoms.
+      Return a single JSON object with two keys:
+        1. "symptoms": the array of extracted symptom strings
+        2. "recommendations": an array of objects each with keys:
+            - name
+            - specialty
+            - reason (one-sentence explanation)
+
+      Here is the list of doctors:
+
+      ${JSON.stringify(doctorProfiles, null, 2)}
+
+    **Return only valid JSON.**`;
+
+   
+     
+    const genResponse = await model.generateContent(compositePrompt);
+    const genText=await genResponse.response.text();
+    const cleanText = genText
+    .replace(/```json/g, '')  
+    .replace(/```/g, '')      
+
+    if(!cleanText){
+      return res.status(502).json({
+        success: false,
+        message: 'Failed to parse Gemini response.',
+      });
+    }
+   
+    let parsed = JSON.parse(cleanText);
+     
+    const { symptoms, recommendations } = parsed;
+
+    if(!symptoms){
+      return res.json({success:true,message:'sorry not found any symptoms'})
+    }
+
+      
+    
+   
+    return res.json({
+      success: true,
+      symptoms,
+      recommendations
+    });
+
+  } catch (error) {
+    console.error('Recommendation error:', error);
+    return res
+      .status(500)
+      .json({ success: false, message: 'Internal server error.' });
+  }
 }
 
 

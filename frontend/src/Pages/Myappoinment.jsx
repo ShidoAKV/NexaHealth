@@ -3,9 +3,8 @@ import { Appcontext } from '../Context/Context';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import askai from '../assets/Ask-Ai.png';
-// import Lottie from 'lottie-react';
-// import Aianimation from '../assets/Animation.json';
+import Lottie from 'lottie-react';
+import aiAssistantAnimation from '../assets/Animation.json';
 
 // import { BiMessageAltAdd } from "react-icons/bi";
 const MyAppointment = () => {
@@ -217,19 +216,19 @@ const MyAppointment = () => {
       <span>💬</span>
        </button>
 
-       <button
+       <div
         onClick={() => navigate('/ai-assistance')}
-        className="fixed w-40  bottom-28 right-2 p-3 text-white"
+        className="fixed  w-16  bottom-32 rounded-md right-5 p-3  text-white"
         style={{
           fontSize: '40px',
         }}
       >
-        <img src={askai} className='w-40 h-24 ml-4 hover:scale-105 hover:ease-out hover:transition-all 2s ' alt="" />
-         {/* <Lottie
-        className="w-20  justify-self-end"
-        animationData={Aianimation}
-        loop={true} /> */}
-       </button>
+       
+         <Lottie
+        className="w-20  justify-self-end cursor-pointer"
+        animationData={aiAssistantAnimation}
+        loop={true} />
+       </div>
      </div>
     
 
