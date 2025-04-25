@@ -359,7 +359,7 @@ const verifyRazorpay = async (req, res) => {
   }
 };
 
-const genAI = new GoogleGenerativeAI(process.env.API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 const AssistanceResponse=async(req,res)=>{
@@ -367,6 +367,7 @@ const AssistanceResponse=async(req,res)=>{
   try {
    
     const { prompt: rawText, limit = 5 } = req.body;
+    
     if (!rawText || typeof rawText !== 'string') {
       return res
         .status(400)
@@ -387,7 +388,7 @@ const AssistanceResponse=async(req,res)=>{
     const doctorProfiles = doctors.map(d => ({
       name:      d.name,
       specialty: d.speciality,  
-      about:       d.about|| ''
+      about:     d.about|| ''
     }));
 
      
@@ -436,9 +437,6 @@ const AssistanceResponse=async(req,res)=>{
       return res.json({success:true,message:'sorry not found any symptoms'})
     }
 
-      
-    
-   
     return res.json({
       success: true,
       symptoms,
