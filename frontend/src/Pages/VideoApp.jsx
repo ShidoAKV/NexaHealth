@@ -1,9 +1,7 @@
-import React, { useRef, useEffect, useState, useContext } from "react";
+import { useRef, useEffect, useState } from "react";
 import Peer from "peerjs";
 import { FaVolumeMute } from "react-icons/fa";
 import { VscUnmute } from "react-icons/vsc";
-import { AppContext } from "../../../Admin/src/Context/AppContext";
-import { io } from "socket.io-client";
 
 const VideoApp = () => {
     const [peerID, setPeerID] = useState(null);
@@ -13,8 +11,6 @@ const VideoApp = () => {
     const peerInstance = useRef(null);
     const localStreamRef = useRef(null);
     const [open, setOpen] = useState(true);
-    //const {}=useContext(AppContext);
-
 
     useEffect(() => {
         const peer = new Peer();
@@ -23,7 +19,6 @@ const VideoApp = () => {
             console.log("✅ My Peer ID:", id);
         });
 
-        // Get user media immediately on mount
         navigator.mediaDevices.getUserMedia({ video: true, audio: true })
             .then((stream) => {
                 localStreamRef.current = stream;
@@ -36,16 +31,14 @@ const VideoApp = () => {
             })
             .catch((err) => {
                 console.error("❌ Error accessing media devices:", err);
-               if(!open) alert("Please allow camera and microphone access!");
+                if (!open) alert("Please allow camera and microphone access!");
             });
 
         peer.on("call", (call) => {
             console.log("📞 Incoming call...");
             if (localStreamRef.current) {
                 call.answer(localStreamRef.current);
-                console.log("✅ Answered call with local stream.");
                 call.on("stream", (remoteStream) => {
-                    console.log("✅ Remote stream received:", remoteStream);
                     if (remoteVideoRef.current) {
                         remoteVideoRef.current.srcObject = remoteStream;
                         remoteVideoRef.current.play().catch(err => console.error("🔴 Error playing remote video:", err));
@@ -70,16 +63,12 @@ const VideoApp = () => {
         }
 
         if (!localStreamRef.current) {
-            console.error("❌ No local stream available! Make sure the camera is accessible.");
             alert("No local video stream available! Please check your camera and permissions.");
             return;
         }
 
-        console.log("📞 Calling peer:", remotePeerId);
         const call = peerInstance.current.call(remotePeerId, localStreamRef.current);
-        
         call.on("stream", (remoteStream) => {
-            console.log("✅ Received remote stream:", remoteStream);
             if (remoteVideoRef.current) {
                 remoteVideoRef.current.srcObject = remoteStream;
                 remoteVideoRef.current.play().catch(err => console.error("🔴 Error playing remote video:", err));
@@ -87,58 +76,82 @@ const VideoApp = () => {
         });
     };
 
-    const handlechange=()=>{
-      setOpen(!open);
-    }
+    const toggleAudioIcon = () => setOpen(!open);
+
+    const copyPeerID = () => {
+        if (peerID) {
+            navigator.clipboard.writeText(peerID);
+            alert("✅ Peer ID copied to clipboard!");
+        }
+    };
 
     return (
-        <div className="flex flex-row-reverse items-center p-5 ">
-            <div  className="pl-8 flex-col pt-20 ">
-                <div className="flex gap-2">
-                    <input 
-                        type="text" 
-                        placeholder="Enter Remote Peer ID" 
-                        value={remotePeerId}  
+        <div className="flex flex-col lg:flex-row items-center justify-center p-5 gap-10 w-full min-h-screen bg-gray-100">
+            {/* Remote Video */}
+            <div className="w-full lg:w-[900px] h-[300px] lg:h-[500px] relative">
+                <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full bg-black rounded-t-md"
+                />
+                <div className="bg-black p-2 flex items-center justify-start gap-2 rounded-b-md">
+                    {open ? (
+                        <FaVolumeMute
+                            onClick={toggleAudioIcon}
+                            className="text-white bg-blue-600 hover:bg-blue-800 p-2 rounded-full cursor-pointer w-10 h-10"
+                        />
+                    ) : (
+                        <VscUnmute
+                            onClick={toggleAudioIcon}
+                            className="text-white bg-blue-600 hover:bg-blue-800 p-2 rounded-full cursor-pointer w-10 h-10"
+                        />
+                    )}
+                </div>
+            </div>
+
+            {/* Sidebar: Local Video + Input + Info */}
+            <div className="flex flex-col items-center lg:items-start w-full lg:w-1/3">
+                <div className="flex gap-2 mb-4 sm:pt-9 lg:pt-0 w-full">
+                    <input
+                        type="text"
+                        placeholder="Enter Remote Peer ID"
+                        value={remotePeerId}
                         onChange={(e) => setRemotePeerId(e.target.value)}
-                        className="border p-2 rounded-md mb-4"
+                        className="flex-grow border border-gray-400 p-2 rounded-md"
                     />
-                    <button 
-                        className="bg-blue-500 text-white px-4 py-2 rounded-lg mb-4 hover:scale-105 hover:ease-in-out hover:transition-all hover:bg-blue-800" 
+                    <button
                         onClick={callUser}
+                        className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-700"
                     >
                         Call
                     </button>
                 </div>
-                
-             <h2 className="text-lg font-bold ">Joining ID:</h2>
-              <strong className="text-red-800 "> {peerID}</strong>
-                <div className="pt-40">
-                    <h3 className="text-center font-bold">Your</h3>
-                    <div className="h-60 w-72">
-                        <video ref={localVideoRef} autoPlay muted playsInline className="border rounded-md w-64 h-48 bg-black" />
-                    </div>
 
-                </div>
-            </div>
-            
-            <div className="flex gap-4 ">
-                <div className="h-[500px] w-[900px]">
-                     <video ref={remoteVideoRef} autoPlay playsInline  className=" rounded-t-md h-[100%] w-[100%] bg-black" />
-                     <div className="bg-black flex rounded-b-md">
-                            <div className="  pl-4 h-10 mb-3">
-                            { open?
-                             (<FaVolumeMute 
-                               onClick={()=>handlechange()}
-                               className=" w-10 h-8 mt-1 rounded-xl cursor-pointer  bg-blue-500 " />
-                              )
-                               :(<VscUnmute 
-                                 onClick={()=>handlechange()}
-                                 className=" w-10 h-8 mt-1 rounded-xl cursor-pointer bg-blue-500 "
-                               />)
-                            }
-                            </div>
-                           
+                {/* Peer ID + Copy Button */}
+                <div className="mb-6 w-full text-center">
+                    <h2 className="font-semibold text-md">Joining ID:</h2>
+                    <div className="flex justify-center items-center gap-2 mt-1">
+                        <p className="text-blue-700 text-sm break-all">{peerID}</p>
+                        <button
+                            onClick={copyPeerID}
+                            className="bg-gray-400 hover:bg-gray-500 hover:text-white text-sm px-2 py-1 rounded-md"
+                        >
+                            Copy
+                        </button>
                     </div>
+                </div>
+
+                {/* Local Video */}
+                <div className="w-64 h-48 bg-black rounded-md overflow-hidden">
+                    <h3 className="text-center font-bold mb-1 text-sm text-gray-700">Your Video</h3>
+                    <video
+                        ref={localVideoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                    />
                 </div>
             </div>
         </div>
