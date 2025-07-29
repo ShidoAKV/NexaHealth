@@ -9,7 +9,7 @@ const chatRouter=express.Router();
 // User Chat
 chatRouter.post('/user/send',upload.single('image'),authUser,sendChat);
 chatRouter.post('/user/fetchchat',authUser,fetchchat);
-chatRouter.post('/deletechat',deletechat);
+chatRouter.post('/user/delete-chat',deletechat);
 
 
 // Doctor Chat

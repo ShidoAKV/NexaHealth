@@ -39,8 +39,7 @@ const DoctorMedicalForm = () => {
       const response = await axios.post(backendurl+"/api/doctor/generate-form",
         data
       );
-      console.log(response);
-      
+     
       if (response.data.success) {
         toast.success("Prescription sent successfully");
       }
@@ -62,8 +61,7 @@ const DoctorMedicalForm = () => {
         const pdf = new jsPDF({
           format: "a4"
         });
-        // console.log(pdf);
-
+      
         const imageProperties = pdf.getImageProperties(imgData);
         const pdfwidth = pdf.internal.pageSize.getWidth();
         const pdfheight = (imageProperties.height * pdfwidth) / (imageProperties.width);

@@ -36,7 +36,6 @@ const App = () => {
         <Route path='/doctor-chat' element={<ChatApp />} />
         <Route path='/videocall' element={<VideoApp/>} />
         <Route path='/ai-assistance' element={<Assistance/>} />
-        
       </Routes>
       {/* <Footer/> */}
 

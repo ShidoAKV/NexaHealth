@@ -1,38 +1,37 @@
-import { useContext, useState } from 'react';
-import ScrollToBottom from 'react-scroll-to-bottom';
-import gptLogo from '../assets/chatgpt.svg';
+import { useContext, useState, useRef, useEffect } from 'react';
 import sendBtn from '../assets/send.svg';
-import gptImgLogo from '../assets/chatgptLogo.svg';
-import addBtn from '../assets/add-30.png';
-import msgIcon from '../assets/message.svg';
 import homeIcon from '../assets/home.svg';
-import savedIcon from '../assets/bookmark.svg';
-import menuIcon from '../assets/menu_icon.svg';    
-import closeIcon from '../assets/cross_icon.png';  
+import closeIcon from '../assets/cross_icon.png';
+import arrowIcon from '../assets/arrow_icon.svg';
 import axios from 'axios';
 import { Appcontext } from '../Context/Context';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import Lottie from 'lottie-react';
+import loaderanimation from '../assets/loader.json';
+import { AiOutlineRobot } from 'react-icons/ai';
 
 const Assistance = () => {
   const [messages, setMessages] = useState([
-    { sender: 'user', text: 'Hello, how can I help you?' },
-    { sender: 'gpt', text: 'I am here to assist you. Ask me anything!' }
+    { sender: 'gpt', text: 'Hello, how can I assist you today?' }
   ]);
-
   const [input, setInput] = useState('');
   const [symptoms, setSymptoms] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const { backendurl, token, userData } = useContext(Appcontext);
   const navigate = useNavigate();
+  const chatContainerRef = useRef(null);
 
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    setMessages(prev => [...prev, { sender: 'user', text: input }]);
+    const userMessage = { sender: 'user', text: input };
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
+    setLoading(true);
 
     try {
       const { data } = await axios.post(
@@ -42,75 +41,63 @@ const Assistance = () => {
       );
 
       if (data.success) {
-        if (data.symptoms && data.symptoms.length > 0) {
-          setMessages(prev => [
+        if (data.symptoms?.length > 0) {
+          // Medical response
+          setMessages((prev) => [
             ...prev,
-            { sender: 'gpt', text: "Here are the recommendations based on your symptoms." }
+            {
+              sender: 'gpt',
+              text: 'Based on your symptoms, here are some doctor recommendations.',
+            },
           ]);
           setSymptoms(data.symptoms);
           setRecommendations(data.recommendations || []);
         } else {
-          setMessages(prev => [
+          // General response
+          setMessages((prev) => [
             ...prev,
-            { sender: 'gpt', text: data.text || "Sorry, no symptoms found. Try again." }
+            { sender: 'gpt', text: data.message || 'I am here to help!' },
           ]);
           setSymptoms([]);
           setRecommendations([]);
         }
       }
     } catch (error) {
-      toast.error("Something went wrong.");
-      console.error(error);
+      toast.error(error.response?.data?.message || 'Something went wrong.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <div className="flex h-screen bg-black/85 text-white relative overflow-hidden">
-      {/* Mobile Menu Toggle */}
-      {!sidebarOpen && (
-        <div className="md:hidden absolute top-4 left-4 z-20">
-          <button onClick={() => setSidebarOpen(true)}>
-            <img src={menuIcon} alt="Menu" className="w-7 h-7" />
-          </button>
-        </div>
-      )}
+  useEffect(() => {
+    chatContainerRef.current?.scrollTo({
+      top: chatContainerRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
+  }, [messages, loading]);
 
+  return (
+    <div className="fixed md:static w-screen lg:w-[100%]  top-0 left-0 z-40 flex h-screen text-white bg-black/90 overflow-hidden">
       {/* Sidebar */}
       <div
-        className={`fixed md:static z-30 h-full bg-black border-r border-white p-4 flex flex-col min-w-[250px] transition-transform duration-300 ease-in-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 w-64`}
+        className={`fixed md:static top-0 left-0 z-40 h-full w-[250px] bg-black border-r border-white 
+        transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+        md:translate-x-0 md:flex md:flex-col`}
       >
-        {/* Mobile Close Button */}
-        <div className="flex justify-between items-center md:hidden mb-4">
+        <div className="flex justify-between items-center p-4 md:hidden">
           <span className="text-lg font-semibold">AI Assistant</span>
           <button onClick={() => setSidebarOpen(false)}>
             <img src={closeIcon} alt="Close" className="w-6 h-6" />
           </button>
         </div>
 
-        {/* Desktop Logo */}
-        <div className="hidden md:flex items-center gap-2 mb-4">
-          <img src={gptLogo} alt="ChatGPT Logo" className="w-8 h-8" />
+        <div className="hidden md:flex items-center gap-2 p-4 mb-2">
+          <AiOutlineRobot className="w-8 h-8 text-blue-500" />
           <span className="text-lg font-semibold">AI Assistant</span>
         </div>
 
-        <button className="w-full py-2 bg-gray-700 rounded-lg mb-4 flex items-center gap-2 px-3">
-          <img src={addBtn} alt="New Chat" className="w-5 h-5" /> New Chat
-        </button>
-
-        <div className="flex flex-col gap-2">
-          <button className="w-full py-2 px-4 bg-gray-800 rounded-lg flex items-center gap-2">
-            <img src={msgIcon} alt="Message" className="w-5 h-5" /> What is Programming?
-          </button>
-          <button className="w-full py-2 px-4 bg-gray-800 rounded-lg flex items-center gap-2">
-            <img src={msgIcon} alt="Message" className="w-5 h-5" /> Explain AI
-          </button>
-          <button className="w-full py-2 px-4 bg-gray-800 rounded-lg flex items-center gap-2">
-            <img src={msgIcon} alt="Message" className="w-5 h-5" /> How does React work?
-          </button>
-        </div>
-
-        <div className="mt-auto pt-4 border-t border-gray-700 flex flex-col gap-2">
+        <div className="p-4">
           <button
             className="w-full py-2 px-4 bg-gray-800 rounded-lg flex items-center gap-2"
             onClick={() => {
@@ -118,32 +105,59 @@ const Assistance = () => {
               setSidebarOpen(false);
             }}
           >
-            <img src={homeIcon} alt="Home" className="w-5 h-5" /> Home
-          </button>
-          <button className="w-full py-2 px-4 bg-gray-800 rounded-lg flex items-center gap-2">
-            <img src={savedIcon} alt="Saved" className="w-5 h-5" /> Saved
+            <img src={homeIcon} alt="Home" className="w-5 h-5" />
+            Home
           </button>
         </div>
       </div>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-full md:ml-0 ml-0">
-        <ScrollToBottom className="flex-1 overflow-y-auto p-4">
-          {messages?.map((msg, index) => (
-            <div key={index} className="flex items-start gap-2 mb-4">
-              <img
-                src={msg.sender === 'user' ? userData?.image : gptImgLogo}
-                alt={msg.sender}
-                className="w-8 h-8 rounded-lg"
-              />
-              <p className={`p-3 rounded-lg max-w-lg ${msg.sender === 'user' ? 'bg-blue-500' : 'bg-gray-700'}`}>
+      {/* Sidebar Toggle */}
+      {!sidebarOpen && (
+        <div className="md:hidden fixed top-4 left-2 z-50 bg-black border p-2 rounded-md shadow-md">
+          <button onClick={() => setSidebarOpen(true)}>
+            <img src={arrowIcon} alt="Open Sidebar" className="w-6 h-6 invert" />
+          </button>
+        </div>
+      )}
+
+      {/* Chat Section */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div
+          ref={chatContainerRef}
+          className="flex-1 overflow-y-auto p-4 space-y-4"
+        >
+          {messages.map((msg, index) => (
+            <div key={index} className="flex items-start gap-2">
+              {msg.sender === 'user' ? (
+                <img
+                  src={userData?.image}
+                  alt="User"
+                  className="w-8 h-8 rounded-lg"
+                />
+              ) : (
+                <AiOutlineRobot className="w-8 h-8 text-blue-500" />
+              )}
+              <div
+                className={`p-3 rounded-lg max-w-lg whitespace-pre-line ${
+                  msg.sender === 'user' ? 'bg-blue-500' : 'bg-gray-700'
+                }`}
+              >
                 {msg.text}
-              </p>
+              </div>
             </div>
           ))}
 
+          {loading && (
+            <div className="flex items-start gap-2">
+              <AiOutlineRobot className="w-8 h-8 text-blue-500" />
+              <div className="p-3 rounded-lg max-w-lg bg-gray-600">
+                <Lottie className="w-40 h-40" animationData={loaderanimation} loop />
+              </div>
+            </div>
+          )}
+
           {symptoms.length > 0 && (
-            <div className="bg-gray-800 p-4 rounded-lg mb-4">
+            <div className="bg-gray-800 p-4 rounded-lg">
               <h3 className="text-lg font-semibold mb-2">Extracted Symptoms:</h3>
               <ul className="list-disc pl-5">
                 {symptoms.map((symptom, index) => (
@@ -156,10 +170,10 @@ const Assistance = () => {
           {recommendations.length > 0 && (
             <div className="bg-gray-800 p-4 rounded-lg">
               <h3 className="text-lg font-semibold mb-2">
-                Recommended Doctors: <span className="text-lg text-pink-500">(Priority Wise)</span>
+                Recommended Doctors: <span className="text-pink-500">(Priority Wise)</span>
               </h3>
               <ul className="space-y-3">
-                {recommendations?.map((doc, index) => (
+                {recommendations.map((doc, index) => (
                   <li key={index} className="border-b border-gray-700 pb-2">
                     <p className="font-medium">
                       {index + 1}. {doc.name} — {doc.specialty}
@@ -170,19 +184,20 @@ const Assistance = () => {
               </ul>
             </div>
           )}
-        </ScrollToBottom>
+        </div>
 
-        {/* Input Box */}
+        {/* Input */}
         <div className="p-4 border-t border-gray-700 flex items-center">
           <input
             type="text"
-            className="flex-1 p-2 bg-gray-800 rounded-lg outline-none text-white"
+            className="flex-1 p-2 bg-gray-800 rounded-lg outline-none text-white border"
             placeholder="Send a message..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           />
           <button
-            className="ml-2 p-2 bg-blue-500 rounded-lg hover:bg-blue-600"
+            className="ml-2 p-2 bg-blue-600 rounded-lg hover:bg-blue-800 border"
             onClick={handleSend}
           >
             <img src={sendBtn} alt="Send" className="w-6 h-6" />

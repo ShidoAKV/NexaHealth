@@ -15,17 +15,14 @@ const MyAppointment = () => {
   const getUserAppointments = async () => {
     try {
       const { data } = await axios.get(backendurl + '/api/user/appointments', { headers: { token } });
-
+      
       if (data.success) {
+
         setAppointments(data.appointments.reverse());
         // console.log(data.appointments);
-
       }
-
     } catch (error) {
-      console.log(error);
       toast.error(error.message);
-
     }
   }
 
@@ -44,7 +41,7 @@ const MyAppointment = () => {
       }
 
     } catch (error) {
-      console.log(error);
+
       toast.error(error.message);
     }
 
@@ -63,12 +60,11 @@ const MyAppointment = () => {
       order_id: order.id,
       receipt: order.receipt,
       handler: async (response) => {
-        console.log(response, 'response hai bhai')
+  
         try {
 
           const { data } = await axios.post(backendurl + '/api/user/verifyRazorpay', response, { headers: { token } })
-          console.log(data, 'verfifyRazorpay')
-
+    
           if (data.success) {
             getUserAppointments();
             navigate('/my-appointments')
@@ -82,9 +78,6 @@ const MyAppointment = () => {
 
       }
     }
-
-
-
     const rzp = new window.Razorpay(options);
     rzp.open();
 

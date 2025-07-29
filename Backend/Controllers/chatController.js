@@ -48,14 +48,12 @@ const sendChat = async (req, res) => {
       });
     }
 
-    res.status(200).json({ success: true, data: chat });
+    return res.status(200).json({ success: true, data: chat });
   } catch (error) {
     console.error("Chat send error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
-
-
 
 const fetchchat = async (req, res) => {
   const { senderId, receiverId } = req.body;
@@ -89,33 +87,37 @@ const fetchchat = async (req, res) => {
   }
 };
 
-
 const deletechat = async (req, res) => {
   try {
-    const { chatid } = req.body;
+    const { senderId, receiverId } = req.body;
 
-    if (!chatid) {
-      return res.status(400).json({ success: false, message: "chatid is required" });
+    if (!senderId || !receiverId) {
+      return res.json({ success: false, message: "senderId and receiverId are required" });
     }
+    
+    
+    chatCache.keys().forEach((key) => {
+      if (key.includes(senderId) || key.includes(receiverId)) {
+        chatCache.del(key);
+      }
+    });
 
-    const response = await Chat.findByIdAndUpdate(chatid, { message: "" });
+    
+    const chat = await Chat.deleteMany({
+      $or: [
+        { senderId,receiverId },
+        { senderId: receiverId, receiverId: senderId } 
+      ]
+    });
+   
+    
+    return res.json({ success: true, message: "Chat cleared successfully" });
 
-    if (response) {
-      io.emit("chatDeleted", chatid);
-
-      // Invalidate the cache for all chats involving this user
-      chatCache.keys().forEach((key) => {
-        if (key.includes(response.senderId) || key.includes(response.receiverId)) {
-          chatCache.del(key);
-        }
-      });
-
-      return res.status(200).json({ success: true, message: "Data deleted successfully" });
-    }
   } catch (error) {
-    return res.json({ success: false, message: "Message not deleted" });
+    return res.json({ success: false, message: "Internal server error" });
   }
 };
+
 
 
 

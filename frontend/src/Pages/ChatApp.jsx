@@ -20,8 +20,7 @@ const ChatApp = () => {
   const [messages, setMessages] = useState([]);
   const [userMessage, setUserMessage] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  // const [socket, setSocket] = useState(null);
-  const [doctorStatus, setDoctorStatus] = useState({});
+ 
   const navigate = useNavigate();
 
   const [Image, setImage] = useState(null);
@@ -146,7 +145,7 @@ const ChatApp = () => {
               setMessages((prev) => [...prev, data.data]);
               setImage(null);
               setUserMessage("");
-            }else{
+            } else {
               setLoading(false);
             }
           }
@@ -175,16 +174,32 @@ const ChatApp = () => {
       }
     }
   };
+
+  const handledelete=async(docId)=>{
+    try {
+      
+        const {data}=await axios.post(`${backendurl}/api/chat/user/delete-chat`,
+          { senderId: userData?._id, receiverId:docId},
+        );
+      
+        if(data.success){
+          toast.success(data.message); 
+          setMessages([]);
+        }else{
+          toast.error(data.message);
+        }
+    } catch (error) {
+       toast.error(error.response?.data?.message||'Something went wrong.');
+    }
+  }
+
+
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
-      e.preventDefault(); 
-      handleSendMessage(); 
+      e.preventDefault();
+      handleSendMessage();
     }
   };
-
-
-
-
 
   return (
     <div className="flex justify-between h-screen w-screen pr-36  top-0 z-50 bg-slate-800   ">
@@ -216,14 +231,13 @@ const ChatApp = () => {
                     <p className="font-medium text-gray-300">{doc.docData?.name}</p>
                     <p className="text-sm text-gray-400">{doc.docData?.speciality}</p>
                   </div>
-                  <span className="text-gray-400">click for<strong className="text-gray-400">online</strong> status</span>
-                  <div>
-                    {doctorStatus[doc.docData._id] === "online" ? (
-                      <span className="text-green-600">Online</span>
-                    ) : (
-                      <span className="text-red-700">Offline</span>
-                    )}
-                  </div>
+
+                  <button
+                   onClick={()=>handledelete(doc?.docData?._id)}
+                    className="px-4 py-1 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 transition-colors shadow-sm"
+                  >
+                    Clear Chat
+                  </button>
                 </div>
               </div>
             ))}
@@ -263,7 +277,7 @@ const ChatApp = () => {
                       />
                     }
                     {
-                     (msg.message) && (msg.message !== 'Noimage')
+                      (msg.message) && (msg.message !== 'Noimage')
                       &&
                       <div className={`p-3 rounded-lg max-w-xs ${msg.senderId === userData._id
                         ? "bg-gray-900 text-white"
@@ -276,7 +290,7 @@ const ChatApp = () => {
                         </small>
                       </div>}
 
-                     {msg.image && (
+                    {msg.image && (
                       <div
                         className="relative flex flex-row-reverse"
                         onMouseEnter={() => setDataindex(index)}
@@ -290,7 +304,7 @@ const ChatApp = () => {
                         {dataindex === index && (
                           <button
                             className="absolute bottom-2 right-2 bg-black text-white h-8 w-20 cursor-pointer text-center rounded-md"
-                            onClick={()=>window.open(msg.image)}
+                            onClick={() => window.open(msg.image)}
                           >
                             Download
                           </button>
@@ -361,4 +375,4 @@ const ChatApp = () => {
   );
 };
 
-export default React.memo(ChatApp);
+export default ChatApp;

@@ -178,6 +178,25 @@ const DoctorChat = () => {
   }
   }
 
+    const handledelete=async(userId)=>{
+      try {
+        
+          const {data}=await axios.post(`${backendurl}/api/chat/user/delete-chat`,
+            { senderId:ProfileData?._id, receiverId:userId},
+          );
+        
+          if(data.success){
+            toast.success(data.message); 
+            setMessages([]);
+          }else{
+            toast.error(data.message);
+          }
+      } catch (error) {
+         toast.error(error.response?.data?.message||'Something went wrong.');
+      }
+    }
+
+
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -218,14 +237,12 @@ const DoctorChat = () => {
                     <p className="font-medium text-gray-300">{user.userData.name}</p>
                     <p className="text-sm text-gray-400">{user.userData.email}</p>
                   </div>
-                  <span className="text-gray-400">click for<strong className="text-gray-400">online</strong> status</span>
-                  <div>
-                    {userstatus[user.userData._id] === "online" ? (
-                      <span className="text-green-600">Online</span>
-                    ) : (
-                      <span className="text-red-700">Offline</span>
-                    )}
-                  </div>
+                  <button
+                   onClick={()=>handledelete(user?.userData?._id)}
+                    className="px-4 py-1 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 transition-colors shadow-sm"
+                  >
+                    Clear Chat
+                  </button>
                 </div>
               </div>
             ))}

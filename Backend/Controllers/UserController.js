@@ -6,7 +6,8 @@ import { v2 as cloudinary } from 'cloudinary';
 import { doctorModel } from '../Models/Doctormodel.js';
 import { appointmentModel } from '../Models/AppointmentModel.js';
 import razorpay from 'razorpay';
-import { GoogleGenerativeAI } from '@google/generative-ai'; 
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
 /*
  Api for user to register,payment,profile change,login etc
 */
@@ -224,12 +225,13 @@ const listAppointment = async (req, res) => {
 
   try {
     const { userId } = req.body;
-    const appointments = await appointmentModel.find({ userId });
 
+    const appointments =await appointmentModel.find({ userId });
+  
     return res.json({ success: true, appointments });
 
   } catch (error) {
-    console.error(error);
+
     return res.json({ success: false, message: error.message });
   }
 }
@@ -277,9 +279,7 @@ const cancelAppointment = async (req, res) => {
   }
 }
 
-
 //Api to make payment of appointment using razorpay
-
 
 const razorpayInstance = new razorpay(
   {
@@ -315,12 +315,12 @@ const paymentRazorpay = async (req, res) => {
       return res.json({ success: false, message: 'Order creation failed' });
     }
     // console.log(order,'Razorpay payment');
-    
+
 
     return res.json({ success: true, order });
 
   } catch (error) {
-     console.error(error);
+    console.error(error);
     return res.json({ success: false, message: error.message });
   }
 }
@@ -330,17 +330,17 @@ const paymentRazorpay = async (req, res) => {
 
 const verifyRazorpay = async (req, res) => {
   try {
-    const {razorpay_order_id,userId } = req.body;
+    const { razorpay_order_id } = req.body;
     //  console.log(req.body);
 
-     
+
     if (!razorpay_order_id) {
       return res.json({ success: false, message: 'Order ID is missing in response' });
     }
 
     // Fetch the order from Razorpay
     const orderInfo = await razorpayInstance.orders.fetch(razorpay_order_id);
-    
+
     if (!orderInfo) {
       return res.json({ success: false, message: 'Order not found in Razorpay' });
     }
@@ -362,99 +362,134 @@ const verifyRazorpay = async (req, res) => {
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-const AssistanceResponse=async(req,res)=>{
-
+const AssistanceResponse = async (req, res) => {
   try {
-   
     const { prompt: rawText, limit = 5 } = req.body;
-    
+
     if (!rawText || typeof rawText !== 'string') {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Please send your symptoms as text.' });
+      return res.status(400).json({
+        success: false,
+        message: 'Please send your query as text.',
+      });
     }
 
-    
-    const doctors = await doctorModel.find({})
-      .limit(50)  
-      .lean();
+    const classifyPrompt = `
+      You are an AI assistant. Classify the following user message into one of two categories:
+      1. "general" — if it's a greeting, casual chat, or non-health related.
+      2. "medical" — if it's a query about symptoms or health concerns.
+
+      Return a JSON like: { "type": "general" } or { "type": "medical" }
+
+      Message: "${rawText}"
+      **Return only JSON.**
+    `;
+
+    const classifyRes = await model.generateContent(classifyPrompt);
+    const classifyText = await classifyRes.response.text();
+
+    const classification = JSON.parse(
+      classifyText.replace(/```json/g, '').replace(/```/g, '')
+    );
+
+
+    if (classification.type === 'general') {
+      const generalPrompt = `
+        You are a friendly AI assistant. Respond conversationally to the user’s general message:
+        
+        "${rawText}"
+
+        Keep it polite, casual, and helpful. No medical advice. Just plain chat.
+        **Return only the message as plain text.**
+      `;
+
+      const generalRes = await model.generateContent(generalPrompt);
+      const generalReply = await generalRes.response.text();
+
+      return res.json({
+        success: true,
+        message: generalReply.trim(),
+      });
+    }
+
+    const doctors = await doctorModel.find({}).limit(50).lean();
+
     if (!doctors.length) {
-      return res
-        .status(404)
-        .json({ success: false, message: 'No doctors available.' });
+      return res.status(404).json({
+        success: false,
+        message: 'No doctors available.',
+      });
     }
 
-  
-    const doctorProfiles = doctors.map(d => ({
-      name:      d.name,
-      specialty: d.speciality,  
-      about:     d.about|| ''
+    const doctorProfiles = doctors.map((d) => ({
+      name: d.name,
+      specialty: d.speciality,
+      about: d.about || '',
     }));
 
-     
-    
     const compositePrompt = `
       You are a clinical assistant.
-      A patient has written the following:
+      A patient wrote the following:
 
       "${rawText}"
 
-      First, extract the patient's symptoms and put them into a JSON array under the key "symptoms".
-      Then, from the list of doctors below, select the top ${limit} specialists best suited to treat these symptoms.
+      First, extract the patient's symptoms into a JSON array under the key "symptoms".
+      Then, from the doctor list below, recommend the top ${limit} relevant doctors.
       Return a single JSON object with two keys:
-        1. "symptoms": the array of extracted symptom strings
-        2. "recommendations": an array of objects each with keys:
+        1. "symptoms": the array of detected symptoms
+        2. "recommendations": an array of objects with:
             - name
             - specialty
-            - reason (one-sentence explanation)
+            - reason (why they are a good match)
 
-      Here is the list of doctors:
-
+      Doctor list:
       ${JSON.stringify(doctorProfiles, null, 2)}
 
-    **Return only valid JSON.**`;
+      **Return only valid JSON**
+    `;
 
-   
-     
     const genResponse = await model.generateContent(compositePrompt);
-    const genText=await genResponse.response.text();
-    const cleanText = genText
-    .replace(/```json/g, '')  
-    .replace(/```/g, '')      
+    const genText = await genResponse.response.text();
 
-    if(!cleanText){
+    const cleanText = genText
+      .replace(/```json/g, '')
+      .replace(/```/g, '');
+
+    if (!cleanText) {
       return res.status(502).json({
         success: false,
         message: 'Failed to parse Gemini response.',
       });
     }
-   
-    let parsed = JSON.parse(cleanText);
-     
+
+    const parsed = JSON.parse(cleanText);
     const { symptoms, recommendations } = parsed;
 
-    if(!symptoms){
-      return res.json({success:true,message:'sorry not found any symptoms'})
+    if (!symptoms || !symptoms.length) {
+      return res.json({
+        success: true,
+        message: 'Sorry, no symptoms were detected.',
+      });
     }
 
     return res.json({
       success: true,
       symptoms,
-      recommendations
+      recommendations,
     });
-
   } catch (error) {
-    console.error('Recommendation error:', error);
-    return res
-      .status(500)
-      .json({ success: false, message: 'Internal server error.' });
+
+    return res.json({
+      success: false,
+      message: 'Internal server error.',
+    });
   }
-}
+};
+
 
 
 
 export {
   registerUser, loginUser, getProfile,
   updateProfile, bookAppointment, listAppointment,
-  cancelAppointment, paymentRazorpay,verifyRazorpay,AssistanceResponse
+  cancelAppointment, paymentRazorpay, verifyRazorpay, AssistanceResponse
 };
