@@ -7,6 +7,7 @@ export const Appcontext = createContext();
 const Appcontextprovider = (props) => {
   const currencySymbol = "$";
   const backendurl=import.meta.env.VITE_BACKEND_URL;
+  const doctorurl=import.meta.env.VITE_DOCTOR_URL;
   const [doctors, setdoctors] = useState([]);
   const [token, setToken] = useState(
     localStorage.getItem("token") ? localStorage.getItem("token") : ""
@@ -61,6 +62,7 @@ const Appcontextprovider = (props) => {
     userData,
     setUserData,
     loadProfileData,
+    doctorurl
   };
 
   useEffect(() => {
