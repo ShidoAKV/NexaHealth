@@ -28,7 +28,6 @@ const DoctorChat = () => {
   const [messages, setMessages] = useState([]);
   const [docmessage, docSetMessage] = useState("");
   const [socket, setSocket] = useState(null);
-  const [userstatus, setUserstatus] = useState({});
   const navigate = useNavigate();
   const [Image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
