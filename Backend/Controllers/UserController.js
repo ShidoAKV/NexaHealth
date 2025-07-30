@@ -364,14 +364,16 @@ const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 const AssistanceResponse = async (req, res) => {
   try {
-    const { prompt: rawText, limit = 5 } = req.body;
-
+    const { prompt, limit = 5 } = req.body;
+      const rawText=prompt.trim();
+   
+     
     if (!rawText || typeof rawText !== 'string') {
-      return res.status(400).json({
+      return res.json({
         success: false,
         message: 'Please send your query as text.',
       });
-    }
+    } 
 
     const classifyPrompt = `
       You are an AI assistant. Classify the following user message into one of two categories:
@@ -390,6 +392,8 @@ const AssistanceResponse = async (req, res) => {
     const classification = JSON.parse(
       classifyText.replace(/```json/g, '').replace(/```/g, '')
     );
+    console.log(classifyText);
+    
 
 
     if (classification.type === 'general') {
@@ -405,6 +409,8 @@ const AssistanceResponse = async (req, res) => {
       const generalRes = await model.generateContent(generalPrompt);
       const generalReply = await generalRes.response.text();
 
+      console.log(generalReply);
+      
       return res.json({
         success: true,
         message: generalReply.trim(),
@@ -480,12 +486,10 @@ const AssistanceResponse = async (req, res) => {
 
     return res.json({
       success: false,
-      message: 'Internal server error.',
+      message:error.message,
     });
   }
 };
-
-
 
 
 export {

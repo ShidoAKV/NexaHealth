@@ -80,10 +80,10 @@ const fetchchat = async (req, res) => {
     chatCache.set(cacheKey, response);
 
 
-    res.status(200).json({ success: true, data: response });
+    return res.json({ success: true, data: response });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.json({ error: "Internal server error" });
   }
 };
 
@@ -106,7 +106,6 @@ const deletechat = async (req, res) => {
     const chat = await Chat.deleteMany({
       $or: [
         { senderId,receiverId },
-        { senderId: receiverId, receiverId: senderId } 
       ]
     });
    
@@ -118,7 +117,56 @@ const deletechat = async (req, res) => {
   }
 };
 
+const sendPdf = async (req, res) => {
+  const { senderId, receiverId } = req.body;
+   
+  try {
+    let pdfUrl = null;
+   
 
+    if (req.file) {
+      const result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            resource_type: "auto", 
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(req.file.buffer);
+      });
 
+      pdfUrl = result.secure_url;
+    }
+   
+    const chat = new Chat({
+      senderId,
+      receiverId,
+      message:'nexahealthpdf',
+      pdf:pdfUrl,
+    });
+    await chat.save();
 
-export { sendChat, fetchchat, deletechat };
+    const cacheKey = `chat_${senderId}_${receiverId}`;
+    chatCache.del(cacheKey);
+
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", {
+        senderId,
+        message:'nexahealthpdf',
+        timestamp: new Date(),
+        pdf:pdfUrl,
+      });
+    }
+
+    return res.json({ success: true, data: chat });
+  } catch (error) {
+    console.error("Chat send error:", error);
+    return res.json({ success: false, error: "Something went wrong." });
+  }
+};
+
+export { sendChat, fetchchat, deletechat,sendPdf};

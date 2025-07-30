@@ -19,6 +19,9 @@ const chatSchema = new mongoose.Schema({
   },
   image:{
     type:String,
+  },
+  pdf:{
+    type:String,
   }
 });
 

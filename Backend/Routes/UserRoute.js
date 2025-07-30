@@ -20,7 +20,7 @@ useRouter.post('/payment-razorpay',authUser,paymentRazorpay);
 useRouter.post('/verifyRazorpay',authUser,verifyRazorpay);
 
 
-useRouter.post('/assistance-response',authUser,AssistanceResponse)
+useRouter.post('/assistance-response',authUser,AssistanceResponse);
 
 
 export default useRouter;

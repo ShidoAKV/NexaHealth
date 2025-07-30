@@ -2,20 +2,18 @@ import React, { useState, useEffect, useContext } from "react";
 import { DoctorContext } from "../../Context/DoctorContext";
 import axios from "axios";
 import io from "socket.io-client";
-// import useSound from "use-sound";
 import ScrollToBottom from "react-scroll-to-bottom";
 import { useNavigate } from "react-router-dom";
 import { MdOutlineVideoCall } from "react-icons/md";
 import { FiPlusCircle } from "react-icons/fi";
 import { IoSend } from "react-icons/io5";
-import { assets } from "../../assets/assets";
 import loaderanimation from "/public/loader.json";
 import Lottie from "lottie-react";
-import {toast} from 'react-toastify'
-
+import { toast } from 'react-toastify'
+import { FaFilePdf, FaTimes } from "react-icons/fa";
 
 const DoctorChat = () => {
-  // const [playSound] = useSound("Notification.mp3");
+  
   const {
     backendurl,
     dToken,
@@ -33,6 +31,9 @@ const DoctorChat = () => {
   const [loading, setLoading] = useState(false);
   const [dataindex, setDataindex] = useState(null);
 
+  const [pdfFile, setPdfFile] = useState(null);
+  const [showOptions, setShowOptions] = useState(false);
+  
 
   useEffect(() => {
     let imagePreviewUrl;
@@ -75,7 +76,7 @@ const DoctorChat = () => {
     if (dToken) {
       getAppointments();
     }
-  }, [backendurl, dToken]);
+  }, [dToken]);
 
 
   useEffect(() => {
@@ -112,88 +113,138 @@ const DoctorChat = () => {
   };
 
   const handleSendMessage = async () => {
-    if (docmessage.trim() || Image) {
-    try {
-      let base64Image = null;
-      if (Image) {
-        setLoading(true);
-        const reader = new FileReader();
-        reader.readAsDataURL(Image);
-        reader.onloadend = async () => {
-          base64Image = reader.result;
+    if (pdfFile && pdfFile.type === "application/pdf") {
+      await handlesendpdf();
+
+    }else{
+      if (docmessage.trim() || Image) {
+      try {
+        let base64Image = null;
+        if (Image) {
+          setLoading(true);
+          const reader = new FileReader();
+          reader.readAsDataURL(Image);
+          reader.onloadend = async () => {
+            base64Image = reader.result;
+
+            const tempMessage = {
+              _id: Date.now().toString(),
+              senderId: ProfileData._id,
+              receiverId: selectedUser._id,
+              message: docmessage.trim() ? docmessage : "Noimage",
+              timestamp: new Date().toISOString(),
+              image: base64Image,
+            };
+
+            const { data } = await axios.post(
+              `${backendurl}/api/chat/doctor/send`,
+              tempMessage,
+              { headers: { dToken, "Content-Type": "application/json" } }
+            )
+
+            if (data.success) {
+              setLoading(false);
+              setMessages((prev) => [...prev, tempMessage]);
+              docSetMessage("");
+              setImage(null);
+            } else {
+              setLoading(false);
+            }
+          }
+        } else {
 
           const tempMessage = {
             _id: Date.now().toString(),
             senderId: ProfileData._id,
             receiverId: selectedUser._id,
-            message:docmessage.trim() ? docmessage : "Noimage",
+            message: docmessage.trim() ? docmessage : "Noimage",
             timestamp: new Date().toISOString(),
-            image: base64Image,
+            image: null,
           };
-          
           const { data } = await axios.post(
             `${backendurl}/api/chat/doctor/send`,
             tempMessage,
             { headers: { dToken, "Content-Type": "application/json" } }
-          )
+          );
 
           if (data.success) {
             setLoading(false);
             setMessages((prev) => [...prev, tempMessage]);
             docSetMessage("");
-            setImage(null);
           } else {
-            setLoading(false);
-          }
-        }
-      } else {
-
-        const tempMessage = {
-          _id: Date.now().toString(),
-          senderId: ProfileData._id,
-          receiverId: selectedUser._id,
-          message:docmessage.trim() ? docmessage : "Noimage",
-          timestamp: new Date().toISOString(),
-          image: null,
-        };
-        const { data } = await axios.post(
-          `${backendurl}/api/chat/doctor/send`,
-          tempMessage,
-          { headers: { dToken, "Content-Type": "application/json" } }
-        );
-
-        if (data.success) {
-          setLoading(false);
-          setMessages((prev) => [...prev, tempMessage]);
-          docSetMessage("");
-        } else {
-          toast.error(data.message);
-        }
-
-      }
-    } catch (error) {
-      toast.error(error.response.data.message)
-    }
-  }
-  }
-
-    const handledelete=async(userId)=>{
-      try {
-        
-          const {data}=await axios.post(`${backendurl}/api/chat/user/delete-chat`,
-            { senderId:ProfileData?._id, receiverId:userId},
-          );
-        
-          if(data.success){
-            toast.success(data.message); 
-            setMessages([]);
-          }else{
             toast.error(data.message);
           }
+
+        }
       } catch (error) {
-         toast.error(error.response?.data?.message||'Something went wrong.');
+        toast.error(error.response.data.message)
       }
     }
+  }
+  }
+
+  const handledelete = async (userId) => {
+    try {
+
+      const { data } = await axios.post(`${backendurl}/api/chat/user/delete-chat`,
+        { senderId: ProfileData?._id, receiverId: userId },
+      );
+
+      if (data.success) {
+        toast.success(data.message);
+        setMessages([]);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Something went wrong.');
+    }
+  }
+
+ 
+
+  const handlesendpdf = async () => {
+    if (!pdfFile || pdfFile.type !== "application/pdf") {
+      toast.error("Please select a valid PDF file.");
+      return;
+    }
+
+    try {
+
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append("pdf", pdfFile);
+      formData.append("senderId", ProfileData?._id);
+      formData.append("receiverId", selectedUser?._id);
+      
+      const {data} = await axios.post(
+        `${backendurl}/api/chat/doctor/send-pdf`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+             dToken
+          },
+        }
+      );
+
+      if (data.success) {
+         setMessages((prev) => [...prev, data.data]); 
+         setPdfFile(null);
+      } else {
+        toast.error("Failed to send PDF.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Error sending PDF.");
+    } finally {
+      setLoading(false);
+  }
+  };
+
+  const removeAttachment = () => setPdfFile(null);
+  const removeimageAttachment = () => setImage(null);
 
 
   const handleKeyPress = (e) => {
@@ -202,6 +253,7 @@ const DoctorChat = () => {
       handleSendMessage();
     }
   };
+
 
 
 
@@ -237,7 +289,7 @@ const DoctorChat = () => {
                     <p className="text-sm text-gray-400">{user.userData.email}</p>
                   </div>
                   <button
-                   onClick={()=>handledelete(user?.userData?._id)}
+                    onClick={() => handledelete(user?.userData?._id)}
                     className="px-4 py-1 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 transition-colors shadow-sm"
                   >
                     Clear Chat
@@ -271,7 +323,7 @@ const DoctorChat = () => {
                       />
                     }
                     {
-                    msg.senderId == ProfileData._id &&
+                      msg.senderId == ProfileData._id &&
                       <img
                         className="w-8 h-8 rounded-full object-cover"
                         src={ProfileData.image}
@@ -279,8 +331,7 @@ const DoctorChat = () => {
                       />
                     }
                     {
-                      (msg.message) && (msg.message !== 'Noimage')
-                      && <div
+                      (msg.message.trim() !== "nexahealthpdf" && msg.message.trim() !== "Noimage") && <div
                         className={`p-3 rounded-lg max-w-xs ${msg.senderId === ProfileData._id
                           ? "bg-gray-900 text-white"
                           : "bg-gray-300 text-gray-900"
@@ -300,12 +351,10 @@ const DoctorChat = () => {
                         onMouseEnter={() => setDataindex(index)}
                         onMouseLeave={() => setDataindex(null)}
                       >
-
                         <img
                           src={msg.image}
                           alt="Sent image"
                           className="w-40 h-auto rounded-lg mt-2"
-
                         />
                         {dataindex === index && (
                           <button
@@ -317,6 +366,31 @@ const DoctorChat = () => {
                         )}
                       </div>
                     )}
+
+                    {msg.pdf && (
+                      <div
+                        className="relative flex flex-row-reverse"
+                        onMouseEnter={() => setDataindex(index)}
+                        onMouseLeave={() => setDataindex(null)}
+                      >
+                        <iframe
+                          src={msg.pdf}
+                          title="PDF Preview"
+                          className="w-40 h-48 rounded-lg mt-2"
+                        ></iframe>
+
+
+                        {dataindex === index && (
+                          <button
+                            className="absolute bottom-2 right-2 overflow-hidden bg-black text-white h-8 w-20 cursor-pointer text-center rounded-md"
+                            onClick={() => window.open(msg.pdf)}
+                          >
+                            Download
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                   </div>
                 ))}
 
@@ -327,28 +401,91 @@ const DoctorChat = () => {
                   loop={true} />
               }
             </ScrollToBottom>
-            
+
             <div className="flex items-center border-t pt-2">
               <MdOutlineVideoCall
                 onClick={() => navigate("/doctor-videocall")}
                 className="h-9 w-8 text-gray-300 hover:bg-gray-700 mr-1 rounded-sm cursor-pointer"
               />
-              <div className="flex justify-between w-full bg-gray-800 rounded-md px-2 py-1">
+              
 
+              <div className="flex justify-between items-center w-full bg-gray-800 rounded-md px-2 py-1">
                 <label htmlFor="file-upload">
-                  <FiPlusCircle className="h-9 w-8 text-gray-300 hover:bg-gray-700 p-1 rounded-md cursor-pointer" />
+                  <FiPlusCircle className="h-9 w-8 text-gray-300 hover:bg-gray-700 p-1 rounded-md cursor-pointer"
+                    onClick={() => setShowOptions((prev) => !prev)}
+                  />
                 </label>
-                <input
-                  type="file"
-                  id="file-upload"
-                  hidden
-                  onChange={(e) => setImage(e.target.files[0])}
-                />
-                <img
-                  className={`w-8 h-10 overflow-hidden rounded ${Image ? 'opacity-75' : 'opacity-0'}`}
-                  src={Image ? URL.createObjectURL(Image) : assets.upload_icon}
-                  alt="Profile Preview"
-                />
+                {showOptions && (
+                  <div className="absolute z-50 bg-neutral-800 border rounded-lg shadow-xl p-4 w-56 top-[80%]  text-sm">
+                    <div className="flex flex-col gap-4">
+
+                     {/* Upload Image Section */}
+                      <label
+                        htmlFor="image-upload"
+                        className="cursor-pointer flex items-center justify-between px-3 py-2 rounded-md bg-neutral-900 hover:bg-neutral-800 text-white border border-blue-200 transition"
+                      >
+                        <span>📷 Upload Image</span>
+                        <input
+                          type="file"
+                          id="image-upload"
+                          hidden
+                          accept="image/*"
+                          onChange={(e) => {setImage(e.target.files[0]),setShowOptions(false)}}
+                        />
+                      </label>
+
+                      {/* Upload PDF Section */}
+                      <label
+                        htmlFor="pdf-upload"
+                        className="cursor-pointer flex items-center justify-between px-3 py-2 rounded-md bg-neutral-900 hover:bg-neutral-800 text-white border border-red-200 transition"
+                      >
+                        <span>📄 Upload PDF</span>
+                        <input
+                          type="file"
+                          id="pdf-upload"
+                          hidden
+                          accept="image/*,application/pdf"
+                          onChange={(e) =>{ setPdfFile(e.target.files[0]),setShowOptions(false)}}
+                        />
+                      </label>
+                    
+                    </div>
+                  </div>
+
+                )}
+
+                {pdfFile && (
+                  <div className=" flex items-center gap-2 bg-gray-800 text-white p-2 rounded-md mr-2">
+                    {pdfFile.type.startsWith("image/") ? (
+                      <img
+                        src={URL.createObjectURL(pdfFile)}
+                        alt="Preview"
+                        className="w-10 h-10 object-cover rounded"
+                      />
+                    ) : (
+                      <FaFilePdf className="w-6 h-6 text-red-500" />
+                    )}
+                    <span className="text-sm truncate max-w-[150px]">{pdfFile.name}</span>
+                    <button onClick={removeAttachment}>
+                      <FaTimes className="text-white hover:text-red-400" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Preview (only shown when an image is selected) */}
+               { (Image )&&<div className=" flex items-center gap-2 bg-gray-800 text-white p-2 rounded-md mr-2">
+                {Image.type.startsWith("image/") && (
+                  <img
+                    className="w-8 h-10 overflow-hidden rounded opacity-75"
+                    src={URL.createObjectURL(Image)}
+                    alt="Preview"
+                  />
+          
+                )}
+                 <button onClick={removeimageAttachment}>
+                    <FaTimes className="text-white hover:text-red-400" />
+                  </button>
+                </div>}
                 <input
                   type="text"
                   className="flex-grow  p-2 bg-transparent text-white border-none focus:outline-none"
@@ -357,7 +494,11 @@ const DoctorChat = () => {
                   onChange={(e) => docSetMessage(e.target.value)}
                   onKeyDown={(e) => handleKeyPress(e)}
                 />
+             
+
+               
               </div>
+
 
               <button
                 onClick={handleSendMessage}

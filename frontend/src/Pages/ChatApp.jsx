@@ -1,31 +1,33 @@
-import React, { useState, useEffect, useContext } from "react";
+import  { useState, useEffect, useContext } from "react";
 import { Appcontext } from "../Context/Context";
 import axios from "axios";
 import io from "socket.io-client";
-// import useSound from "use-sound";
 import ScrollToBottom from "react-scroll-to-bottom";
 import { MdOutlineVideoCall } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import { FiPlusCircle } from "react-icons/fi";
 import { IoSend } from "react-icons/io5";
-import { assets } from "../assets/assets";
 import { toast } from "react-toastify";
 import loaderanimation from '/public/loader.json'
 import Lottie from "lottie-react";
+import { FaFilePdf, FaTimes } from "react-icons/fa";
 
 const ChatApp = () => {
-  // const [playSound] = useSound("MessageNotification.mp3");
+  
   const { backendurl, token, userData } = useContext(Appcontext);
   const [appointments, setAppointments] = useState([]);
   const [messages, setMessages] = useState([]);
   const [userMessage, setUserMessage] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState(null);
- 
+
   const navigate = useNavigate();
 
   const [Image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [dataindex, setDataindex] = useState(null);
+
+  const [pdfFile, setPdfFile] = useState(null);
+  const [showOptions, setShowOptions] = useState(false);
 
 
   useEffect(() => {
@@ -39,7 +41,6 @@ const ChatApp = () => {
       }
     };
   }, [Image]);
-
 
 
   useEffect(() => {
@@ -110,28 +111,56 @@ const ChatApp = () => {
     }
   }, [backendurl, token, selectedDoctor, userData]);
 
+
   const handleSelectDoctor = (doctor) => {
     setSelectedDoctor(doctor);
   };
 
   const handleSendMessage = async () => {
-    if (userMessage.trim() || Image) {
-      try {
+    if (pdfFile && pdfFile.type === "application/pdf") {
+      await handlesendpdf();
+    }else{
+      if (userMessage.trim() || Image) {
+        try {
 
-        let base64Image = null;
+          let base64Image = null;
 
-        if (Image) {
-          setLoading(true);
-          const reader = new FileReader();
-          reader.readAsDataURL(Image);
-          reader.onloadend = async () => {
-            base64Image = reader.result;
+          if (Image) {
+            setLoading(true);
+            const reader = new FileReader();
+            reader.readAsDataURL(Image);
+            reader.onloadend = async () => {
+              base64Image = reader.result;
 
+              const newMessage = {
+                senderId: userData?._id,
+                receiverId: selectedDoctor?._id,
+                message: userMessage.trim() ? userMessage : "Noimage",
+                image: base64Image,
+              };
+
+              const { data } = await axios.post(
+                `${backendurl}/api/chat/user/send`,
+                newMessage,
+                { headers: { token, "Content-Type": "application/json" } }
+              );
+
+              if (data.success) {
+                setLoading(false);
+                setMessages((prev) => [...prev, data.data]);
+                setImage(null);
+                setUserMessage("");
+              } else {
+                setLoading(false);
+              }
+            }
+          } else {
+            // Send only text message if no image
             const newMessage = {
               senderId: userData?._id,
               receiverId: selectedDoctor?._id,
-              message: userMessage.trim() ? userMessage : "Noimage",
-              image: base64Image,
+              message: userMessage.trim(),
+              image: null
             };
 
             const { data } = await axios.post(
@@ -141,57 +170,76 @@ const ChatApp = () => {
             );
 
             if (data.success) {
-              setLoading(false);
               setMessages((prev) => [...prev, data.data]);
-              setImage(null);
               setUserMessage("");
-            } else {
-              setLoading(false);
             }
           }
-        } else {
-          // Send only text message if no image
-          const newMessage = {
-            senderId: userData?._id,
-            receiverId: selectedDoctor?._id,
-            message: userMessage.trim(),
-            image: null
-          };
-
-          const { data } = await axios.post(
-            `${backendurl}/api/chat/user/send`,
-            newMessage,
-            { headers: { token, "Content-Type": "application/json" } }
-          );
-
-          if (data.success) {
-            setMessages((prev) => [...prev, data.data]);
-            setUserMessage("");
-          }
+        } catch (error) {
+          console.error("Error sending message:", error);
         }
-      } catch (error) {
-        console.error("Error sending message:", error);
       }
-    }
+  }
   };
 
-  const handledelete=async(docId)=>{
+ 
+ 
+  const handlesendpdf = async () => {
+    if (!pdfFile || pdfFile.type !== "application/pdf") {
+      toast.error("Please select a valid PDF file.");
+      return;
+    }
+
     try {
+
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append("pdf", pdfFile);
+      formData.append("senderId", userData?._id);
+      formData.append("receiverId", selectedDoctor?._id);
       
-        const {data}=await axios.post(`${backendurl}/api/chat/user/delete-chat`,
-          { senderId: userData?._id, receiverId:docId},
-        );
-      
-        if(data.success){
-          toast.success(data.message); 
-          setMessages([]);
-        }else{
-          toast.error(data.message);
+      const {data} = await axios.post(
+        `${backendurl}/api/chat/user/send-pdf`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            token,
+          },
         }
+      );
+
+      if (data.success) {
+         setMessages((prev) => [...prev, data.data]); 
+         setPdfFile(null);
+      } else {
+        toast.error("Failed to send PDF.");
+      }
     } catch (error) {
-       toast.error(error.response?.data?.message||'Something went wrong.');
+      console.error(error);
+      toast.error("Error sending PDF.");
+    } finally {
+      setLoading(false);
+  }
+  };
+  const handledelete = async (docId) => {
+    try {
+
+      const { data } = await axios.post(`${backendurl}/api/chat/user/delete-chat`,
+        { senderId: userData?._id, receiverId: docId },
+      );
+      if (data.success) {
+        toast.success(data.message);
+        setMessages([]);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Something went wrong.');
     }
   }
+  const removeAttachment = () => setPdfFile(null);
+  const removeimageAttachment = () => setImage(null);
 
 
   const handleKeyPress = (e) => {
@@ -201,6 +249,7 @@ const ChatApp = () => {
     }
   };
 
+ 
   return (
     <div className="flex justify-between h-screen w-screen pr-36  top-0 z-50 bg-slate-800   ">
       {/* Left Panel: Appointments */}
@@ -233,7 +282,7 @@ const ChatApp = () => {
                   </div>
 
                   <button
-                   onClick={()=>handledelete(doc?.docData?._id)}
+                    onClick={() => handledelete(doc?.docData?._id)}
                     className="px-4 py-1 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 transition-colors shadow-sm"
                   >
                     Clear Chat
@@ -253,7 +302,7 @@ const ChatApp = () => {
               Chat with {selectedDoctor.name}
             </h2>
             <ScrollToBottom className="overflow-y-auto flex-grow p-2 bg-gray-700 border border-gray-400 rounded-md mb-4">
-              {Array.isArray(messages) &&
+              {messages&& Array.isArray(messages) &&
                 messages.map((msg, index) => (
                   <div
                     key={index}
@@ -277,9 +326,7 @@ const ChatApp = () => {
                       />
                     }
                     {
-                      (msg.message) && (msg.message !== 'Noimage')
-                      &&
-                      <div className={`p-3 rounded-lg max-w-xs ${msg.senderId === userData._id
+                    (msg.message.trim() !== "nexahealthpdf"&&msg.message.trim() !== "Noimage") &&<div className={`p-3 rounded-lg max-w-xs ${msg.senderId === userData._id
                         ? "bg-gray-900 text-white"
                         : "bg-gray-300 text-gray-900"
                         }`}
@@ -312,6 +359,31 @@ const ChatApp = () => {
                       </div>
                     )}
 
+                    {msg.pdf && (
+                      <div
+                        className="relative flex flex-row-reverse"
+                        onMouseEnter={() => setDataindex(index)}
+                        onMouseLeave={() => setDataindex(null)}
+                      >
+                        <iframe
+                          src={msg.pdf}
+                          title="PDF Preview"
+                          className="w-40 h-48 rounded-lg mt-2"
+                        ></iframe>
+
+
+                        {dataindex === index && (
+                          <button
+                            className="absolute bottom-2 right-2 overflow-hidden bg-black text-white h-8 w-20 cursor-pointer text-center rounded-md"
+                            onClick={() => window.open(msg.pdf)}
+                          >
+                            Download
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+
                   </div>
 
                 ))}
@@ -331,22 +403,85 @@ const ChatApp = () => {
                 className="h-9 w-10 mx-1 text-gray-300 hover:bg-gray-700 p-1 rounded-sm cursor-pointer"
               />
 
-              <div className="flex justify-between w-full bg-gray-800 rounded-md px-2 py-1">
 
+              {/* Message Box */}
+              <div className="flex justify-between items-center w-full bg-gray-800 rounded-md px-2 py-1">
                 <label htmlFor="file-upload">
-                  <FiPlusCircle className="h-9 w-8 text-gray-300 hover:bg-gray-700 p-1 rounded-md cursor-pointer" />
+                  <FiPlusCircle className="h-9 w-8 text-gray-300 hover:bg-gray-700 p-1 rounded-md cursor-pointer"
+                    onClick={() => setShowOptions((prev) => !prev)}
+                  />
                 </label>
-                <input
-                  type="file"
-                  id="file-upload"
-                  hidden
-                  onChange={(e) => setImage(e.target.files[0])}
-                />
-                <img
-                  className={`w-8 h-10 overflow-hidden rounded ${Image ? 'opacity-75' : 'opacity-0'}`}
-                  src={Image ? URL.createObjectURL(Image) : assets.upload_icon}
-                  alt="Profile Preview"
-                />
+                {showOptions && (
+                  <div className="absolute z-50 bg-neutral-800 border rounded-lg shadow-xl p-4 w-56 top-[80%]  text-sm">
+                    <div className="flex flex-col gap-4">
+
+                      {/* Upload Image Section */}
+                      <label
+                        htmlFor="image-upload"
+                        className="cursor-pointer flex items-center justify-between px-3 py-2 rounded-md bg-neutral-900 hover:bg-neutral-800 text-white border border-blue-200 transition"
+                      >
+                        <span>📷 Upload Image</span>
+                        <input
+                          type="file"
+                          id="image-upload"
+                          hidden
+                          accept="image/*"
+                          onChange={(e) => {setImage(e.target.files[0]),setShowOptions(false)}}
+                        />
+                      </label>
+
+                      {/* Upload PDF Section */}
+                      <label
+                        htmlFor="pdf-upload"
+                        className="cursor-pointer flex items-center justify-between px-3 py-2 rounded-md bg-neutral-900 hover:bg-neutral-800 text-white border border-red-200 transition"
+                      >
+                        <span>📄 Upload PDF</span>
+                        <input
+                          type="file"
+                          id="pdf-upload"
+                          hidden
+                          accept="image/*,application/pdf"
+                          onChange={(e) =>{ setPdfFile(e.target.files[0]),setShowOptions(false)}}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                )}
+
+                {pdfFile && (
+                  <div className=" flex items-center gap-2 bg-gray-800 text-white p-2 rounded-md mr-2">
+                    {pdfFile.type.startsWith("image/") ? (
+                      <img
+                        src={URL.createObjectURL(pdfFile)}
+                        alt="Preview"
+                        className="w-10 h-10 object-cover rounded"
+                      />
+                    ) : (
+                      <FaFilePdf className="w-6 h-6 text-red-500" />
+                    )}
+                    <span className="text-sm truncate max-w-[150px]">{pdfFile.name}</span>
+                    <button onClick={removeAttachment}>
+                      <FaTimes className="text-white hover:text-red-400" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Preview (only shown when an image is selected) */}
+               { (Image )&&<div className=" flex items-center gap-2 bg-gray-800 text-white p-2 rounded-md mr-2">
+                {Image.type.startsWith("image/") && (
+                  <img
+                    className="w-8 h-10 overflow-hidden rounded opacity-75"
+                    src={URL.createObjectURL(Image)}
+                    alt="Preview"
+                  />
+          
+                )}
+                 <button onClick={removeimageAttachment}>
+                    <FaTimes className="text-white hover:text-red-400" />
+                  </button>
+                </div>}
+
                 <input
                   type="text"
                   className="flex-grow p-2 bg-transparent text-white border-none focus:outline-none"
@@ -354,9 +489,11 @@ const ChatApp = () => {
                   value={userMessage}
                   onChange={(e) => setUserMessage(e.target.value)}
                   onKeyDown={(e) => handleKeyPress(e)}
+
                 />
               </div>
 
+              {/* Send Button */}
               <button
                 onClick={handleSendMessage}
                 className="bg-green-500 text-white p-2 ml-2 rounded-md hover:bg-green-600 transition"

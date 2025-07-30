@@ -340,7 +340,7 @@ const generateForm = async (req, res) => {
             from: process.env.EMAIL_USER,
             to: email,
             subject: "Your Medical Prescription",
-            text: "Please find attached your medical prescription.",
+            text: `Dear Patient,\n\nPlease find attached your medical prescription, issued by Dr. ${doctorName}. If you have any questions or need further assistance, feel free to reach out.\n\nWishing you good health,\nTeam NexaHealth`,
             attachments: [
                 {
                     filename: `prescription.pdf`,
