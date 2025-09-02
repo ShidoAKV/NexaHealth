@@ -2,8 +2,15 @@ import { useRef, useEffect, useState } from "react";
 import Peer from "peerjs";
 import { FaVolumeMute } from "react-icons/fa";
 import { VscUnmute } from "react-icons/vsc";
+import io from "socket.io-client";
+import { useContext } from "react";
+import { Appcontext } from "../Context/Context";
+import { useSearchParams } from "react-router-dom";
 
 const VideoApp = () => {
+    const { backendurl, token, userData } = useContext(Appcontext);
+    const [searchparams] = useSearchParams();
+    const doctorId = searchparams.get("id");
     const [peerID, setPeerID] = useState(null);
     const [remotePeerId, setRemotePeerId] = useState("");
     const localVideoRef = useRef(null);
@@ -12,12 +19,19 @@ const VideoApp = () => {
     const localStreamRef = useRef(null);
     const [open, setOpen] = useState(true);
 
+  
+
     useEffect(() => {
+       
         const peer = new Peer();
+        
         peer.on("open", (id) => {
             setPeerID(id);
+
             console.log("✅ My Peer ID:", id);
         });
+
+     
 
         navigator.mediaDevices.getUserMedia({ video: true, audio: true })
             .then((stream) => {
@@ -56,6 +70,37 @@ const VideoApp = () => {
         };
     }, []);
 
+      useEffect(() => {
+        if (token && doctorId && userData&&peerID) {
+            if(!peerID) return;
+
+            const newSocket = io(backendurl, {
+                query: { userId: userData?._id },
+            });
+
+            newSocket.emit("video-initiat", {
+                userId: userData._id,
+                peerId: peerID,
+                docId: doctorId,
+                direction: "user-to_doctor"
+            });
+
+            newSocket.on("get-peerId", (data) => {
+            if(data.message==="doctor_peer_id"){
+                console.log('other person pee id',data.peerId);
+                setRemotePeerId(data.peerId);
+            }
+
+            })
+            // setSocket(newSocket);
+            return () => {
+                newSocket.disconnect();
+            };
+        }
+    }, [token, doctorId, userData, backendurl,peerID]);
+
+
+
     const callUser = () => {
         if (!remotePeerId.trim()) {
             alert("❌ Please enter a valid Peer ID");
@@ -84,7 +129,8 @@ const VideoApp = () => {
             alert("✅ Peer ID copied to clipboard!");
         }
     };
-
+    console.log(remotePeerId);
+    
     return (
         <div className="flex flex-col lg:flex-row items-center justify-center p-5 gap-10 w-full min-h-screen bg-gray-100">
             {/* Remote Video */}

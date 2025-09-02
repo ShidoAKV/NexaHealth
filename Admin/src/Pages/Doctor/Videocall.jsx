@@ -1,16 +1,24 @@
-import React, { useRef, useEffect, useState } from "react";
+import  { useRef, useEffect, useState } from "react";
 import Peer from "peerjs";
 import { FaVolumeMute } from "react-icons/fa";
 import { VscUnmute } from "react-icons/vsc";
+import io from "socket.io-client";
+import { useContext } from "react";
+import { DoctorContext } from "../../Context/DoctorContext";
+import { useSearchParams } from "react-router-dom";
 
 const Videocall = () => {
     const [peerID, setPeerID] = useState(null);
+    const {backendurl,dToken,ProfileData}=useContext(DoctorContext);
+    const [searchparams]=useSearchParams();
+    const userId=searchparams.get("id");
     const [remotePeerId, setRemotePeerId] = useState("");
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
     const peerInstance = useRef(null);
     const localStreamRef = useRef(null);
     const [open, setOpen] = useState(true);
+
 
     useEffect(() => {
         const peer = new Peer();
@@ -53,6 +61,41 @@ const Videocall = () => {
             peer.destroy();
         };
     }, []);
+
+    useEffect(() => {
+        if (dToken &&ProfileData._id&& userId) {
+            if(!peerID) return ;
+
+          const newSocket = io(backendurl, {
+            query: { userId: userId },
+          });
+    
+          newSocket.emit("video-initiat", {
+            docId:ProfileData._id,
+            peerId:peerID,
+            direction:"doctor_to_user",
+            userId:userId
+          });
+
+          newSocket.on("get-peerId",(data)=>{
+            if(data.message==="user_peer_id"){
+                console.log('other person pee id',data.peerId);
+                
+              setRemotePeerId(data.peerId);
+            }
+          })
+          // setSocket(newSocket);
+    
+          return () => {
+            newSocket.disconnect();
+          };
+        }
+    }, [dToken ,ProfileData._id, userId, backendurl]);
+    
+ console.log('====================================');
+ console.log(remotePeerId);
+ console.log('====================================');
+
 
     const callUser = () => {
         if (!remotePeerId.trim()) {

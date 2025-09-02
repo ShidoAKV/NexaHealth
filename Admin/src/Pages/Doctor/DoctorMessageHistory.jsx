@@ -70,6 +70,7 @@ const DoctorMessageHistory = () => {
     setSelectedNote("");
   };
 
+  
   return (
     <div className="w-full max-w-6xl mx-auto my-5 p-4">
       <p className="mb-3 text-lg font-medium">All Message History</p>
@@ -83,7 +84,7 @@ const DoctorMessageHistory = () => {
           <p className="text-center text-white font-medium">Notes</p>
         </div>
         {messagedata?.map((patient) =>
-          patient.messages.map((message) => (
+          patient?.messages.reverse().map((message) => (
             <div
               key={message._id}
               className="flex flex-col sm:grid sm:grid-cols-6 gap-2 items-center p-4 border-b"

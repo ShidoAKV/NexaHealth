@@ -102,12 +102,14 @@ const deletechat = async (req, res) => {
       }
     });
 
+
     
     const chat = await Chat.deleteMany({
       $or: [
         { senderId,receiverId },
       ]
     });
+    
    
     
     return res.json({ success: true, message: "Chat cleared successfully" });

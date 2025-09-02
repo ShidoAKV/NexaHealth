@@ -12,7 +12,7 @@ const DoctorContextProvider = (props) => {
     const [appointments, setAppointments] = useState([]);
     const [dashData, setDashData] = useState(false);
     const [ProfileData, setProfileData] = useState(false)
-     const [messagedata, setMessagedata] = useState([])
+    const [messagedata, setMessagedata] = useState([])
     const getAppointments = async () => {
         try {
             const { data } = await axios.get(backendurl + '/api/doctor/appointments', { headers: { dToken } });
@@ -96,8 +96,6 @@ const DoctorContextProvider = (props) => {
             const { data } = await axios.get(backendurl + '/api/doctor/profile', { headers: { dToken } });
 
             if (data.success) {
-                //  console.log(data.ProfileData);
-
                 setProfileData(data.ProfileData);
             } else {
                 toast.error(data.message);
@@ -108,28 +106,32 @@ const DoctorContextProvider = (props) => {
         }
     }
 
+    useEffect(() => {
+        if (dToken) {
+            getmessagehistory();
+        }
+
+        if (!ProfileData) {
+            getProfileData();
+        }
+    }, [dToken, ProfileData]);
+
+
     const getmessagehistory = async () => {
         try {
-            const { data } = await axios.get(backendurl + '/api/doctor/message-history',
-                {headers:{dToken}},
+
+            const { data } = await axios.get(backendurl + `/api/doctor/message-history?docName=${ProfileData.name}`,
+                { headers: { dToken } },
             );
             if (data.success) {
-               setMessagedata(data.message);
+                setMessagedata(data.message);
             }
         } catch (error) {
-            console.log(error.response.message.data);
-            
             toast.error(error.response.message.data);
         }
 
     }
 
-    useEffect(() => {
-        if (dToken) {
-            getProfileData();
-            getmessagehistory();
-        }
-    }, [dToken])
 
 
     const value = {
@@ -137,7 +139,7 @@ const DoctorContextProvider = (props) => {
         , getAppointments, appointments
         , setAppointments, completeAppointment
         , cancelAppointment, getDashData, dashData, setDashData,
-        getProfileData, setProfileData, ProfileData, getmessagehistory,messagedata
+        getProfileData, setProfileData, ProfileData, getmessagehistory, messagedata
     }
 
     return (

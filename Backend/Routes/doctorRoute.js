@@ -12,7 +12,7 @@ doctorRouter.post('/cancel-appointment',authDoctor,appointmentCancel);
 doctorRouter.get('/dashboard',authDoctor,doctorDashboard);
 doctorRouter.get('/profile',authDoctor,doctorProfile);
 doctorRouter.post('/update-profile',authDoctor,updateDoctorProfile);
-doctorRouter.post('/generate-form',generateForm);
+doctorRouter.post('/generate-form',authDoctor,generateForm);
 doctorRouter.get('/message-history',authDoctor,getmessagehistory);
 doctorRouter.post('/edit',authDoctor,Editnote);
 

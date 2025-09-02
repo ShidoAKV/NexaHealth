@@ -404,7 +404,7 @@ const DoctorChat = () => {
 
             <div className="flex items-center border-t pt-2">
               <MdOutlineVideoCall
-                onClick={() => navigate("/doctor-videocall")}
+                onClick={() => navigate(`/doctor-videocall?id=${selectedUser._id}}`)}
                 className="h-9 w-8 text-gray-300 hover:bg-gray-700 mr-1 rounded-sm cursor-pointer"
               />
               

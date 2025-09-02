@@ -58,13 +58,19 @@ const Login = () => {
 
   }
 
+   const handleguest = () => {
+    setpassword('12345678')
+    setemail('guestdoctoremail@gmail.com')
+    setState('Doctor')
+  }
+
 
   return (
 
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
 
       <form onSubmit={onSubmitHandler} className="w-full max-w-md bg-white p-6 rounded-lg shadow-md">
-        <div className="mb-6 text-center">
+        <div className="mb-6 text-center flex justify-center items-centers gap-10">
           <p className="text-xl font-semibold text-gray-700">
             <span className="text-primary">{state}</span> Login
           </p>
@@ -73,6 +79,16 @@ const Login = () => {
                Don't crash my application !! <strong className='text-primary font-semibold underline cursor-pointer'>admin@nexahealth.com</strong >|<strong className='text-primary font-semibold underline cursor-pointer'>123456</strong> 
             </p>
           )}
+         {
+          (state==='Doctor' )&&  <button
+            type="button"
+            onClick={handleguest}
+            className="px-4 py-1 bg-primary text-white rounded-lg"
+          >
+            Test
+          </button>
+         }
+
         </div>
 
 
@@ -116,6 +132,7 @@ const Login = () => {
             : <p>Admin login?<span className='text-primary  font-semibold underline  cursor-pointer' onClick={() => setState('Admin')}>click here</span></p>
 
         }
+
       </form>
     </div>
 

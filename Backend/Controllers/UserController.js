@@ -7,7 +7,7 @@ import { doctorModel } from '../Models/Doctormodel.js';
 import { appointmentModel } from '../Models/AppointmentModel.js';
 import razorpay from 'razorpay';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-
+import { FormModel } from '../Models/FormModel.js';
 /*
  Api for user to register,payment,profile change,login etc
 */
@@ -279,6 +279,18 @@ const cancelAppointment = async (req, res) => {
   }
 }
 
+
+const getuserprescriptionhistory = async (req, res) => {
+    try { 
+        const {email,patientName}=req.query;
+        const data = await FormModel.find({email,patientName});
+  
+        return res.json({ success: true, message: data });
+    } catch (error) {
+        return res.json({ success: false, error });
+    }
+}
+
 //Api to make payment of appointment using razorpay
 
 const razorpayInstance = new razorpay(
@@ -392,8 +404,7 @@ const AssistanceResponse = async (req, res) => {
     const classification = JSON.parse(
       classifyText.replace(/```json/g, '').replace(/```/g, '')
     );
-    console.log(classifyText);
-    
+   
 
 
     if (classification.type === 'general') {
@@ -409,7 +420,6 @@ const AssistanceResponse = async (req, res) => {
       const generalRes = await model.generateContent(generalPrompt);
       const generalReply = await generalRes.response.text();
 
-      console.log(generalReply);
       
       return res.json({
         success: true,
@@ -496,4 +506,5 @@ export {
   registerUser, loginUser, getProfile,
   updateProfile, bookAppointment, listAppointment,
   cancelAppointment, paymentRazorpay, verifyRazorpay, AssistanceResponse
+  ,getuserprescriptionhistory
 };

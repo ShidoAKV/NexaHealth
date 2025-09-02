@@ -240,13 +240,14 @@ const updateDoctorProfile = async (req, res) => {
 
 const generateForm = async (req, res) => {
     try {
-        const { email, patientName, doctorName, diagnosis, medicines, instructions } = req.body;
+        const { email, patientName, doctorName, diagnosis, medicines, instructions} = req.body;
+
 
         if (!validator.isEmail(email)) {
             return res.status(400).json({ success: false, message: "Invalid Email" });
         }
 
-        let patientRecord = await FormModel.findOne({ email });
+        let patientRecord = await FormModel.findOne({ email,doctorName});
 
         if (!patientRecord) {
             patientRecord = new FormModel({ patientName, doctorName, email, messages: [] });
@@ -363,9 +364,9 @@ const generateForm = async (req, res) => {
 
 
 const getmessagehistory = async (req, res) => {
-    try {
-        const data = await FormModel.find();
-
+    try { 
+        const {docName}=req.query;
+        const data = await FormModel.find({doctorName:docName});
         return res.json({ success: true, message: data });
 
     } catch (error) {

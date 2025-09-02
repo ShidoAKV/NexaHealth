@@ -70,6 +70,7 @@ const Navbar = () => {
             >
               Contact
             </NavLink>
+
           </div>
 
           {/* User Menu or Login Button */}
@@ -101,6 +102,14 @@ const Navbar = () => {
                   >
                     My Appointments
                   </p>
+
+                  <p
+                    onClick={() => navigate('/my-prescription')}
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                  >
+                    My Prescriptions
+                  </p>
+
                   <p
                     onClick={logout}
                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer"

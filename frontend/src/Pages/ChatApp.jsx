@@ -399,7 +399,7 @@ const ChatApp = () => {
             <div className="flex items-center border-t pt-2 bg-gray-900 p-2 rounded-md">
 
               <MdOutlineVideoCall
-                onClick={() => navigate("/videocall")}
+                onClick={() => navigate(`/videocall?id=${selectedDoctor._id}`)}
                 className="h-9 w-10 mx-1 text-gray-300 hover:bg-gray-700 p-1 rounded-sm cursor-pointer"
               />
 

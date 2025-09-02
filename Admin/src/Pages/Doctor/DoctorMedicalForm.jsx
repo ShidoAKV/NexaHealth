@@ -30,24 +30,30 @@ const DoctorMedicalForm = () => {
     formState: { errors, isSubmitting },
   } = useForm({ resolver: yupResolver(schema) });
 
- const {backendurl}=useContext(DoctorContext);
+
+  const { backendurl, dToken, appointments } = useContext(DoctorContext);
+
 
   const pdfRef = useRef();
 
   const onSubmit = async (data) => {
     try {
-      const response = await axios.post(backendurl+"/api/doctor/generate-form",
-        data
+      const response = await axios.post(backendurl + "/api/doctor/generate-form",
+        data,
+        {
+          headers: { dToken },
+        }
       );
-     
+
       if (response.data.success) {
         toast.success("Prescription sent successfully");
       }
     } catch (error) {
-        toast.error(error.response.data.message);
+      toast.error(error.response.data.message);
     }
   };
   const [loading, setLoading] = useState(false);
+  const [enable, setEnable] = useState(true);
 
   const handleDownload = () => {
 
@@ -61,7 +67,7 @@ const DoctorMedicalForm = () => {
         const pdf = new jsPDF({
           format: "a4"
         });
-      
+
         const imageProperties = pdf.getImageProperties(imgData);
         const pdfwidth = pdf.internal.pageSize.getWidth();
         const pdfheight = (imageProperties.height * pdfwidth) / (imageProperties.width);
@@ -75,29 +81,74 @@ const DoctorMedicalForm = () => {
 
   }
 
-
-
   return (
     <div className="flex flex-col md:flex-row md:justify-between h-auto md:h-screen w-full gap-4 bg-black p-4">
       {/* FORM SECTION */}
+
+
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="w-full md:w-1/2 mx-auto px-5 py-5 border rounded-lg bg-blue-900 bg-opacity-60 overflow-scroll no-scrollbar"
       >
-        <h1 className="text-center text-2xl text-slate-300 mb-4">
-          Prescription Form
-        </h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl text-slate-300">Prescription Form</h1>
+          <button
+            className={`px-4 py-2 text-white rounded-lg shadow transition ${enable ? 'bg-green-700' : 'bg-blue-700'
+              }`}
+            onClick={() => setEnable(!enable)}
+          >
+            {enable ? 'Disable' : 'Suggestion'}
+          </button>
+
+        </div>
+
+
+        {/* patient Name */}
+        <div>
+          <label className="text-slate-300">Patient Name:</label>
+          {enable ? (
+            <select
+              {...register("patientName")}
+              className="border p-2 w-full rounded-md"
+            >
+              <option value="">Select Patient</option>
+              {appointments?.map((appt, idx) => (
+                <option key={idx} value={appt.userData.name}>
+                  {appt.userData.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              {...register("patientName")}
+              className="border p-3 w-full rounded-md"
+            />
+          )}
+          <p className="text-red-500">{errors.patientName?.message}</p>
+        </div>
+        {/*  Doctor Name */}
 
         <div>
           <label className="text-slate-300">Patient Name:</label>
-          <input {...register("patientName")} className="border p-3 w-full rounded-md" />
+          {enable ? (
+            <select
+              {...register("doctorName")}
+              className="border p-2 w-full rounded-md"
+            >
+              <option value="">Select yourself</option>
+              {appointments?.map((appt, idx) => (
+                <option key={idx} value={appt.docData.name}>
+                  {appt.docData.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              {...register("patientName")}
+              className="border p-3 w-full rounded-md"
+            />
+          )}
           <p className="text-red-500">{errors.patientName?.message}</p>
-        </div>
-
-        <div>
-          <label className="text-slate-300">Doctor Name:</label>
-          <input {...register("doctorName")} className="border p-2 w-full rounded-md" />
-          <p className="text-red-500">{errors.doctorName?.message}</p>
         </div>
 
         <div>
@@ -123,9 +174,28 @@ const DoctorMedicalForm = () => {
           <p className="text-red-500">{errors.date?.message}</p>
         </div>
 
+        {/* Patient Email */}
         <div>
           <label className="text-slate-300">Patient Email:</label>
-          <input type="email" {...register("email")} className="border p-2 w-full rounded-md" />
+          {enable ? (
+            <select
+              {...register("email")}
+              className="border p-2 w-full rounded-md"
+            >
+              <option value="">Select Email</option>
+              {appointments?.map((appt, idx) => (
+                <option  key={idx} value={appt.userData.email}>
+                 {appt.userData.name}{'---->'} <span className="font-semibo">{appt.userData.email}</span>
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="email"
+              {...register("email")}
+              className="border p-2 w-full rounded-md"
+            />
+          )}
           <p className="text-red-500">{errors.email?.message}</p>
         </div>
 
@@ -137,6 +207,9 @@ const DoctorMedicalForm = () => {
           {isSubmitting ? "Sending" : "Send"}
         </button>
       </form>
+
+
+
 
       {/* PRESCRIPTION PREVIEW */}
       <div className="bg-blue-950 w-full md:w-1/2 p-4 rounded-lg border-[1.5px] border-white">
@@ -197,6 +270,7 @@ const DoctorMedicalForm = () => {
           Download
         </button>
       </div>
+
     </div>
 
 

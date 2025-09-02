@@ -63,15 +63,18 @@ const getReceiverSocketId = (receiverId) => {
   return appointmenttoSocketMap[receiverId];
 };
 
+let onlineUsers = {}; 
+
 io.on("connection", (socket) => {
   const { userId, docId } = socket.handshake.query;
   if (userId) {
+     onlineUsers[userId] = socket.id;
     appointmenttoSocketMap[userId] = socket.id;
   }
   if (docId) {
     appointmenttoSocketMap[docId] = socket.id;
   }
-
+ 
   socket.on("register-chat", (data) => {
    
     if (userId && docId) {
@@ -112,6 +115,33 @@ io.on("connection", (socket) => {
       }
     }
   });
+
+  
+  
+  socket.on("video-initiat",(data)=>{
+    const {userId,docId,peerId,direction}=data;
+       
+      if(userId&&docId&&peerId){
+        // user Side se peerid send
+        if(direction==="user-to_doctor"){
+          console.log(data);
+          
+          io.emit("get-peerId",{
+            peerId:peerId,
+            message:"user_peer_id"
+          })
+         }
+        
+         if(direction==="doctor_to_user"){
+          console.log(data);
+          
+          io.emit("get-peerId",{
+            peerId:peerId,
+            message:"doctor_peer_id"
+          })
+         }
+       }
+  })
 
   // On disconnect, determine which id is disconnecting and broadcast offline status.
   socket.on("disconnect", () => {

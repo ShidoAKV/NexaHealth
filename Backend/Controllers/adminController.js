@@ -75,7 +75,6 @@ const addDoctor=async(req,res)=>{
         
     }
 }
-
 // API for login admin
 
 const loginAdmin=async(req,res)=>{
