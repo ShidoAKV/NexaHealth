@@ -12,10 +12,10 @@ import { createServer } from "http";
 import chatRouter from "./Routes/ChatRoute.js";
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
+  windowMs: 15 * 60 * 1000,
   max: 100,
   standardHeaders: true,
-  legacyHeaders: false, 
+  legacyHeaders: false,
   message: 'Too many requests, please try again later.'
 });
 
@@ -25,15 +25,15 @@ connectCloudinary();
 const app = express();
 const port = process.env.PORT || 7000;
 
-const server =createServer(app);
+const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin:[process.env.FRONTEND_USER_URL,process.env.FRONTEND_DOCTOR_URL],
+    origin: [process.env.FRONTEND_USER_URL, process.env.FRONTEND_DOCTOR_URL],
     methods: ["GET", "POST"],
     credentials: true,
   },
-  pingTimeout: 60000, 
+  pingTimeout: 60000,
   pingInterval: 25000,
 });
 
@@ -43,10 +43,10 @@ app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use("/api/admin", adminRouter,limiter);
-app.use("/api/doctor", doctorRouter,limiter);
-app.use("/api/user", userRouter,limiter);
-app.use("/api/chat",chatRouter);
+app.use("/api/admin", adminRouter, limiter);
+app.use("/api/doctor", doctorRouter, limiter);
+app.use("/api/user", userRouter, limiter);
+app.use("/api/chat", chatRouter);
 
 
 app.get("/home", (req, res) => {
@@ -58,25 +58,30 @@ app.get("/home", (req, res) => {
 const appointmenttoSocketMap = {};
 const doctorToUsers = {};
 const userToDoctors = {};
-
+const videocallrequests = {};
 const getReceiverSocketId = (receiverId) => {
   return appointmenttoSocketMap[receiverId];
 };
 
-let onlineUsers = {}; 
+
 
 io.on("connection", (socket) => {
-  const { userId, docId } = socket.handshake.query;
+  const { userId, docId, message } = socket.handshake.query;
   if (userId) {
-     onlineUsers[userId] = socket.id;
     appointmenttoSocketMap[userId] = socket.id;
   }
   if (docId) {
     appointmenttoSocketMap[docId] = socket.id;
   }
- 
+
+
+ if (message === "make_video_call") {
+    if (userId) videocallrequests[userId] = socket.id;
+    if (docId) videocallrequests[docId] = socket.id;
+  }
+  
   socket.on("register-chat", (data) => {
-   
+
     if (userId && docId) {
 
       if (!doctorToUsers[docId]) {
@@ -84,7 +89,7 @@ io.on("connection", (socket) => {
       }
       doctorToUsers[docId].add(userId);
 
-  
+
       if (!userToDoctors[userId]) {
         userToDoctors[userId] = new Set();
       }
@@ -116,34 +121,25 @@ io.on("connection", (socket) => {
     }
   });
 
-  
-  
-  socket.on("video-initiat",(data)=>{
-    const {userId,docId,peerId,direction}=data;
-       
-      if(userId&&docId&&peerId){
-        // user Side se peerid send
-        if(direction==="user-to_doctor"){
-          console.log(data);
-          
-          io.emit("get-peerId",{
-            peerId:peerId,
-            message:"user_peer_id"
-          })
-         }
-        
-         if(direction==="doctor_to_user"){
-          console.log(data);
-          
-          io.emit("get-peerId",{
-            peerId:peerId,
-            message:"doctor_peer_id"
-          })
-         }
-       }
-  })
+  socket.on("video-initiat", (data) => {
+    const { userId, docId,patientpeerId, doctorpeerId, direction } = data;
 
-  // On disconnect, determine which id is disconnecting and broadcast offline status.
+    if (direction === "user_to_doctor" && videocallrequests[docId]) {
+      io.to(videocallrequests[docId]).emit("get-peerId", {
+        doctorPeerId:doctorpeerId,
+        userPeerId:patientpeerId,
+        message: "user_peer_id",
+      });
+    }else if (direction === "doctor_to_user" && videocallrequests[userId]) {
+      io.to(videocallrequests[userId]).emit("get-peerId", {
+        doctorPeerId:doctorpeerId,
+        userPeerId:patientpeerId,
+        message: "doctor_peer_id",
+      });
+    }
+  });
+
+ 
   socket.on("disconnect", () => {
     // console.log("User disconnected:", socket.id);
     let disconnectedId = null;
@@ -156,6 +152,18 @@ io.on("connection", (socket) => {
         break;
       }
     }
+
+    for (const [id, sId] of Object.entries(videocallrequests)) {
+      if (sId === socket.id) {
+        delete videocallrequests[id];
+        break;
+      }
+    }
+    // for (const key of Object.keys(videoPeerMap)) {
+    //   if (key.includes(disconnectedId)) {
+    //     delete videoPeerMap[key];
+    //   }
+    // }
 
     if (disconnectedId) {
       // If the disconnected id is a doctor, broadcast offline to all paired users.
@@ -192,4 +200,4 @@ server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
-export {io,getReceiverSocketId};
+export { io, getReceiverSocketId };
