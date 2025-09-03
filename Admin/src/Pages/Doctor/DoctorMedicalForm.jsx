@@ -31,7 +31,7 @@ const DoctorMedicalForm = () => {
   } = useForm({ resolver: yupResolver(schema) });
 
 
-  const { backendurl, dToken, appointments } = useContext(DoctorContext);
+  const { backendurl, dToken, appointments ,ProfileData} = useContext(DoctorContext);
 
 
   const pdfRef = useRef();
@@ -112,11 +112,12 @@ const DoctorMedicalForm = () => {
               className="border p-2 w-full rounded-md"
             >
               <option value="">Select Patient</option>
-              {appointments?.map((appt, idx) => (
-                <option key={idx} value={appt.userData.name}>
-                  {appt.userData.name}
+              {[...new Set(appointments?.map(appt => appt.userData.name))].map((name, idx) => (
+                <option key={idx} value={name}>
+                  {name}
                 </option>
               ))}
+
             </select>
           ) : (
             <input
@@ -136,11 +137,7 @@ const DoctorMedicalForm = () => {
               className="border p-2 w-full rounded-md"
             >
               <option value="">Select yourself</option>
-              {appointments?.map((appt, idx) => (
-                <option key={idx} value={appt.docData.name}>
-                  {appt.docData.name}
-                </option>
-              ))}
+                 <option value={ProfileData.name}>{ProfileData.name}</option>
             </select>
           ) : (
             <input
@@ -177,25 +174,29 @@ const DoctorMedicalForm = () => {
         {/* Patient Email */}
         <div>
           <label className="text-slate-300">Patient Email:</label>
-          {enable ? (
-            <select
-              {...register("email")}
-              className="border p-2 w-full rounded-md"
-            >
-              <option value="">Select Email</option>
-              {appointments?.map((appt, idx) => (
-                <option  key={idx} value={appt.userData.email}>
-                 {appt.userData.name}{'---->'} <span className="font-semibo">{appt.userData.email}</span>
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              type="email"
-              {...register("email")}
-              className="border p-2 w-full rounded-md"
-            />
-          )}
+          {
+            enable ? (
+              <select
+                {...register("email")}
+                className="border p-2 w-full rounded-md"
+              >
+                <option value="">Select Email</option>
+                {[...new Set(appointments?.map(appt => appt.userData.email))].map((email, idx) => {
+                  const user = appointments.find(appt => appt.userData.email === email);
+                  return (
+                    <option key={idx} value={email}>
+                      {user.userData.name}{'---->'}{email}
+                    </option>
+                  );
+                })}
+              </select>
+            ) : (
+              <input
+                type="email"
+                {...register("email")}
+                className="border p-2 w-full rounded-md"
+              />
+            )}
           <p className="text-red-500">{errors.email?.message}</p>
         </div>
 
