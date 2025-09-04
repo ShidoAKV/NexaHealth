@@ -37,6 +37,7 @@ const DoctorMedicalForm = () => {
   const pdfRef = useRef();
 
   const onSubmit = async (data) => {
+
     try {
       const response = await axios.post(backendurl + "/api/doctor/generate-form",
         data,
@@ -93,6 +94,7 @@ const DoctorMedicalForm = () => {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl text-slate-300">Prescription Form</h1>
           <button
+           type="button"
             className={`px-4 py-2 text-white rounded-lg shadow transition ${enable ? 'bg-green-700' : 'bg-blue-700'
               }`}
             onClick={() => setEnable(!enable)}
@@ -127,10 +129,11 @@ const DoctorMedicalForm = () => {
           )}
           <p className="text-red-500">{errors.patientName?.message}</p>
         </div>
+
         {/*  Doctor Name */}
 
         <div>
-          <label className="text-slate-300">Patient Name:</label>
+          <label className="text-slate-300">Doctor Name:</label>
           {enable ? (
             <select
               {...register("doctorName")}
@@ -141,11 +144,11 @@ const DoctorMedicalForm = () => {
             </select>
           ) : (
             <input
-              {...register("patientName")}
+              {...register("doctorName")}
               className="border p-3 w-full rounded-md"
             />
           )}
-          <p className="text-red-500">{errors.patientName?.message}</p>
+          <p className="text-red-500">{errors.doctorName?.message}</p>
         </div>
 
         <div>
