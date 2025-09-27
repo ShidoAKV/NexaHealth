@@ -3,10 +3,10 @@ import { io } from "socket.io-client";
 let socket;
 
 export const initSocket = (backendurl, query) => {
-  if (socket) {
-    socket.disconnect();  // cleanup old connection
+  if (!socket) {
+     socket = io(backendurl, { query });
   }
-  socket = io(backendurl, { query });
+ 
   return socket;
 };
 

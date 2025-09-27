@@ -1,11 +1,11 @@
 import { createContext, useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { MdReportGmailerrorred } from "react-icons/md";
 
 export const Appcontext = createContext();
 
-const Appcontextprovider = (props) => {
+
+const Appcontextprovider = ({children}) => {
   const currencySymbol = "$";
   const backendurl = import.meta.env.VITE_BACKEND_URL;
   const doctorurl = import.meta.env.VITE_DOCTOR_URL;
@@ -14,6 +14,7 @@ const Appcontextprovider = (props) => {
     localStorage.getItem("token") ? localStorage.getItem("token") : ""
   );
   const [userData, setUserData] = useState();
+  const [loading, setLoading] = useState(false);
 
   const getDoctorData = async () => {
     try {
@@ -63,7 +64,9 @@ const Appcontextprovider = (props) => {
     userData,
     setUserData,
     loadProfileData,
-    doctorurl
+    doctorurl,
+    loading,
+    setLoading
   };
 
   useEffect(() => {
@@ -81,7 +84,7 @@ const Appcontextprovider = (props) => {
 
   return (
     <Appcontext.Provider value={value}>
-      {props.children}
+      {children}
     </Appcontext.Provider>
   );
 };

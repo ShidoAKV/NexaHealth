@@ -13,7 +13,7 @@ import { toast } from 'react-toastify'
 import { FaFilePdf, FaTimes } from "react-icons/fa";
 
 const DoctorChat = () => {
-  
+
   const {
     backendurl,
     dToken,
@@ -33,7 +33,8 @@ const DoctorChat = () => {
 
   const [pdfFile, setPdfFile] = useState(null);
   const [showOptions, setShowOptions] = useState(false);
-  
+  const [userstatus, setUserstatus] = useState({});
+
 
   useEffect(() => {
     let imagePreviewUrl;
@@ -47,22 +48,50 @@ const DoctorChat = () => {
     };
   }, [Image]);
 
+  useEffect(() => {
+    if (dToken && ProfileData?._id) {
+      const onlineSocket = io(backendurl,
+        { query: { personId: ProfileData?._id } }
+      );
+      // creating the online socket
+      onlineSocket.emit("online-register", {
+        personId: ProfileData?._id
+      });
+
+      onlineSocket.on("online-users", (users) => {
+        const userStatusMap = {};
+        users.forEach(({ userId, status }) => {
+          userStatusMap[userId] = status;
+        });
+        setUserstatus(userStatusMap);
+      });
+
+      return () => {
+        onlineSocket.disconnect();
+      };
+    }
+  }, [dToken, ProfileData, backendurl])
+
 
   useEffect(() => {
     if (dToken && ProfileData?._id) {
       // Connect with only the doctor's id in the handshake.
+
       const newSocket = io(backendurl, {
         query: { docId: ProfileData._id },
       });
 
       newSocket.on("status-update", ({ userId, status }) => {
-        console.log({ userId, status });
         setUserstatus((prev) => ({ ...prev, [userId]: status }));
       });
 
       newSocket.on("newMessage", (newMessage) => {
         setMessages((prev) => [...prev, newMessage]);
       });
+      newSocket.on("online-users", (user) => {
+        console.log(user);
+
+      })
 
       setSocket(newSocket);
 
@@ -116,16 +145,42 @@ const DoctorChat = () => {
     if (pdfFile && pdfFile.type === "application/pdf") {
       await handlesendpdf();
 
-    }else{
+    } else {
       if (docmessage.trim() || Image) {
-      try {
-        let base64Image = null;
-        if (Image) {
-          setLoading(true);
-          const reader = new FileReader();
-          reader.readAsDataURL(Image);
-          reader.onloadend = async () => {
-            base64Image = reader.result;
+        try {
+          let base64Image = null;
+          if (Image) {
+            setLoading(true);
+            const reader = new FileReader();
+            reader.readAsDataURL(Image);
+            reader.onloadend = async () => {
+              base64Image = reader.result;
+
+              const tempMessage = {
+                _id: Date.now().toString(),
+                senderId: ProfileData._id,
+                receiverId: selectedUser._id,
+                message: docmessage.trim() ? docmessage : "Noimage",
+                timestamp: new Date().toISOString(),
+                image: base64Image,
+              };
+
+              const { data } = await axios.post(
+                `${backendurl}/api/chat/doctor/send`,
+                tempMessage,
+                { headers: { dToken, "Content-Type": "application/json" } }
+              )
+
+              if (data.success) {
+                setLoading(false);
+                setMessages((prev) => [...prev, tempMessage]);
+                docSetMessage("");
+                setImage(null);
+              } else {
+                setLoading(false);
+              }
+            }
+          } else {
 
             const tempMessage = {
               _id: Date.now().toString(),
@@ -133,54 +188,28 @@ const DoctorChat = () => {
               receiverId: selectedUser._id,
               message: docmessage.trim() ? docmessage : "Noimage",
               timestamp: new Date().toISOString(),
-              image: base64Image,
+              image: null,
             };
-
             const { data } = await axios.post(
               `${backendurl}/api/chat/doctor/send`,
               tempMessage,
               { headers: { dToken, "Content-Type": "application/json" } }
-            )
+            );
 
             if (data.success) {
               setLoading(false);
               setMessages((prev) => [...prev, tempMessage]);
               docSetMessage("");
-              setImage(null);
             } else {
-              setLoading(false);
+              toast.error(data.message);
             }
+
           }
-        } else {
-
-          const tempMessage = {
-            _id: Date.now().toString(),
-            senderId: ProfileData._id,
-            receiverId: selectedUser._id,
-            message: docmessage.trim() ? docmessage : "Noimage",
-            timestamp: new Date().toISOString(),
-            image: null,
-          };
-          const { data } = await axios.post(
-            `${backendurl}/api/chat/doctor/send`,
-            tempMessage,
-            { headers: { dToken, "Content-Type": "application/json" } }
-          );
-
-          if (data.success) {
-            setLoading(false);
-            setMessages((prev) => [...prev, tempMessage]);
-            docSetMessage("");
-          } else {
-            toast.error(data.message);
-          }
-
+        } catch (error) {
+          toast.error(error.response.data.message)
         }
-      } catch (error) {
-        toast.error(error.response.data.message)
       }
     }
-  }
   }
 
   const handledelete = async (userId) => {
@@ -201,7 +230,7 @@ const DoctorChat = () => {
     }
   }
 
- 
+
 
   const handlesendpdf = async () => {
     if (!pdfFile || pdfFile.type !== "application/pdf") {
@@ -217,21 +246,21 @@ const DoctorChat = () => {
       formData.append("pdf", pdfFile);
       formData.append("senderId", ProfileData?._id);
       formData.append("receiverId", selectedUser?._id);
-      
-      const {data} = await axios.post(
+
+      const { data } = await axios.post(
         `${backendurl}/api/chat/doctor/send-pdf`,
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
-             dToken
+            dToken
           },
         }
       );
 
       if (data.success) {
-         setMessages((prev) => [...prev, data.data]); 
-         setPdfFile(null);
+        setMessages((prev) => [...prev, data.data]);
+        setPdfFile(null);
       } else {
         toast.error("Failed to send PDF.");
       }
@@ -240,7 +269,7 @@ const DoctorChat = () => {
       toast.error("Error sending PDF.");
     } finally {
       setLoading(false);
-  }
+    }
   };
 
   const removeAttachment = () => setPdfFile(null);
@@ -279,15 +308,25 @@ const DoctorChat = () => {
                 onClick={() => handleSelectUser(user.userData)}
               >
                 <div className="flex items-center space-x-3 ">
+                  <div className="relative">
                   <img
                     src={user.userData.image || ""}
                     alt="User"
                     className="w-12 h-12 rounded-full object-cover"
                   />
+                  <span
+                    className={`absolute left-0 bottom-0 top-0 right-0 block w-3 h-3 rounded-full border-2 border-gray-900 ${userstatus[user.userData._id] === "online" ? "bg-green-500" : "bg-gray-400"
+                      }`}
+                  ></span>
+
+                  </div>
                   <div className="flex-grow">
                     <p className="font-medium text-gray-300">{user.userData.name}</p>
                     <p className="text-sm text-gray-400">{user.userData.email}</p>
                   </div>
+
+
+
                   <button
                     onClick={() => handledelete(user?.userData?._id)}
                     className="px-4 py-1 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 transition-colors shadow-sm"
@@ -407,7 +446,7 @@ const DoctorChat = () => {
                 onClick={() => navigate(`/doctor-videocall?id=${selectedUser._id}`)}
                 className="h-9 w-8 text-gray-300 hover:bg-gray-700 mr-1 rounded-sm cursor-pointer"
               />
-              
+
 
               <div className="flex justify-between items-center w-full bg-gray-800 rounded-md px-2 py-1">
                 <label htmlFor="file-upload">
@@ -419,7 +458,7 @@ const DoctorChat = () => {
                   <div className="absolute z-50 bg-neutral-800 border rounded-lg shadow-xl p-4 w-56 top-[80%]  text-sm">
                     <div className="flex flex-col gap-4">
 
-                     {/* Upload Image Section */}
+                      {/* Upload Image Section */}
                       <label
                         htmlFor="image-upload"
                         className="cursor-pointer flex items-center justify-between px-3 py-2 rounded-md bg-neutral-900 hover:bg-neutral-800 text-white border border-blue-200 transition"
@@ -430,7 +469,7 @@ const DoctorChat = () => {
                           id="image-upload"
                           hidden
                           accept="image/*"
-                          onChange={(e) => {setImage(e.target.files[0]),setShowOptions(false)}}
+                          onChange={(e) => { setImage(e.target.files[0]), setShowOptions(false) }}
                         />
                       </label>
 
@@ -445,10 +484,10 @@ const DoctorChat = () => {
                           id="pdf-upload"
                           hidden
                           accept="image/*,application/pdf"
-                          onChange={(e) =>{ setPdfFile(e.target.files[0]),setShowOptions(false)}}
+                          onChange={(e) => { setPdfFile(e.target.files[0]), setShowOptions(false) }}
                         />
                       </label>
-                    
+
                     </div>
                   </div>
 
@@ -473,16 +512,16 @@ const DoctorChat = () => {
                 )}
 
                 {/* Preview (only shown when an image is selected) */}
-               { (Image )&&<div className=" flex items-center gap-2 bg-gray-800 text-white p-2 rounded-md mr-2">
-                {Image.type.startsWith("image/") && (
-                  <img
-                    className="w-8 h-10 overflow-hidden rounded opacity-75"
-                    src={URL.createObjectURL(Image)}
-                    alt="Preview"
-                  />
-          
-                )}
-                 <button onClick={removeimageAttachment}>
+                {(Image) && <div className=" flex items-center gap-2 bg-gray-800 text-white p-2 rounded-md mr-2">
+                  {Image.type.startsWith("image/") && (
+                    <img
+                      className="w-8 h-10 overflow-hidden rounded opacity-75"
+                      src={URL.createObjectURL(Image)}
+                      alt="Preview"
+                    />
+
+                  )}
+                  <button onClick={removeimageAttachment}>
                     <FaTimes className="text-white hover:text-red-400" />
                   </button>
                 </div>}
@@ -494,9 +533,9 @@ const DoctorChat = () => {
                   onChange={(e) => docSetMessage(e.target.value)}
                   onKeyDown={(e) => handleKeyPress(e)}
                 />
-             
 
-               
+
+
               </div>
 
 

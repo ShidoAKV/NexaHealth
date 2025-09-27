@@ -16,13 +16,19 @@ import ChatApp from './Pages/ChatApp';
 import VideoApp from './Pages/VideoApp';
 import Assistance from './Pages/Assistance';
 import Prescription from './Pages/Prescription';
+import GlobalLoader from './config/Loader';
+import { useContext } from 'react';
+import { Appcontext } from './Context/Context';
 
 const App = () => {
+  const { loading } = useContext(Appcontext);
   return (
     <div className='mx-4 sm:mx-[10%]'>
-
+        
       <ToastContainer/>
       <Navbar/>
+       {loading && <GlobalLoader />}
+      
       <Routes>
         <Route path='/' element={<Homes />}/>
         <Route path='/home' element={<Homes />} />

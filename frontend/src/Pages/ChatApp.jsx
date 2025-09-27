@@ -1,4 +1,4 @@
-import  { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Appcontext } from "../Context/Context";
 import axios from "axios";
 import io from "socket.io-client";
@@ -13,8 +13,8 @@ import Lottie from "lottie-react";
 import { FaFilePdf, FaTimes } from "react-icons/fa";
 
 const ChatApp = () => {
-  
-  const { backendurl, token, userData } = useContext(Appcontext);
+
+  const { backendurl, token, userData, setLoading } = useContext(Appcontext);
   const [appointments, setAppointments] = useState([]);
   const [messages, setMessages] = useState([]);
   const [userMessage, setUserMessage] = useState("");
@@ -23,11 +23,13 @@ const ChatApp = () => {
   const navigate = useNavigate();
 
   const [Image, setImage] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setloading] = useState(false);
   const [dataindex, setDataindex] = useState(null);
 
   const [pdfFile, setPdfFile] = useState(null);
   const [showOptions, setShowOptions] = useState(false);
+  const [doctorstatus, setdoctorstatus] = useState({});
+
 
 
   useEffect(() => {
@@ -42,6 +44,35 @@ const ChatApp = () => {
     };
   }, [Image]);
 
+  useEffect(() => {
+    if (token && userData?._id) {
+
+      const onlineSocket = io(backendurl,
+        { query: { personId: userData?._id } }
+      );
+
+
+      // creating the online socket
+      onlineSocket.emit("online-register", {
+        personId: userData._id
+      });
+
+      onlineSocket.on("online-users", (users) => {
+        const userStatusMap = {};
+        users.forEach(({ userId, status }) => {
+          userStatusMap[userId] = status;
+        });
+        setdoctorstatus(userStatusMap);
+      });
+
+
+      return () => {
+        onlineSocket.disconnect();
+      };
+    }
+  }, [token, userData, backendurl])
+
+
 
   useEffect(() => {
     if (token && selectedDoctor?._id && userData?._id) {
@@ -50,7 +81,7 @@ const ChatApp = () => {
       });
 
       newSocket.on("status-update", ({ userId, status }) => {
-        setDoctorStatus((prev) => ({ ...prev, [userId]: status }));
+        setdoctorstatus((prev) => ({ ...prev, [userId]: status }));
       });
 
       newSocket.on("newMessage", (newMessage) => {
@@ -62,6 +93,13 @@ const ChatApp = () => {
         docId: selectedDoctor._id,
       });
 
+
+      // newSocket.on("online-users", (user) => {
+      //   console.log(user);
+
+      //   setdoctorstatus(user)
+      // })
+
       // setSocket(newSocket);
 
       return () => {
@@ -70,23 +108,31 @@ const ChatApp = () => {
     }
   }, [token, selectedDoctor, userData, backendurl]);
 
+
+
   useEffect(() => {
     if (token) {
+
       const fetchAppointments = async () => {
         try {
+          setLoading(true);
           const { data } = await axios.get(`${backendurl}/api/user/appointments`, {
             headers: { token },
           });
           if (data.success) {
+            setLoading(false);
             setAppointments(data.appointments.reverse());
           }
         } catch (error) {
+          setLoading(false);
           console.error("Error fetching appointments:", error);
         }
       };
+
       fetchAppointments();
     }
   }, [backendurl, token]);
+
 
   useEffect(() => {
     if (token && selectedDoctor) {
@@ -119,14 +165,14 @@ const ChatApp = () => {
   const handleSendMessage = async () => {
     if (pdfFile && pdfFile.type === "application/pdf") {
       await handlesendpdf();
-    }else{
+    } else {
       if (userMessage.trim() || Image) {
         try {
 
           let base64Image = null;
 
           if (Image) {
-            setLoading(true);
+            setloading(true);
             const reader = new FileReader();
             reader.readAsDataURL(Image);
             reader.onloadend = async () => {
@@ -146,12 +192,12 @@ const ChatApp = () => {
               );
 
               if (data.success) {
-                setLoading(false);
+                setloading(false);
                 setMessages((prev) => [...prev, data.data]);
                 setImage(null);
                 setUserMessage("");
               } else {
-                setLoading(false);
+                setloading(false);
               }
             }
           } else {
@@ -178,11 +224,11 @@ const ChatApp = () => {
           console.error("Error sending message:", error);
         }
       }
-  }
+    }
   };
 
- 
- 
+
+
   const handlesendpdf = async () => {
     if (!pdfFile || pdfFile.type !== "application/pdf") {
       toast.error("Please select a valid PDF file.");
@@ -191,14 +237,14 @@ const ChatApp = () => {
 
     try {
 
-      setLoading(true);
+      setloading(true);
 
       const formData = new FormData();
       formData.append("pdf", pdfFile);
       formData.append("senderId", userData?._id);
       formData.append("receiverId", selectedDoctor?._id);
-      
-      const {data} = await axios.post(
+
+      const { data } = await axios.post(
         `${backendurl}/api/chat/user/send-pdf`,
         formData,
         {
@@ -210,8 +256,8 @@ const ChatApp = () => {
       );
 
       if (data.success) {
-         setMessages((prev) => [...prev, data.data]); 
-         setPdfFile(null);
+        setMessages((prev) => [...prev, data.data]);
+        setPdfFile(null);
       } else {
         toast.error("Failed to send PDF.");
       }
@@ -219,8 +265,8 @@ const ChatApp = () => {
       console.error(error);
       toast.error("Error sending PDF.");
     } finally {
-      setLoading(false);
-  }
+      setloading(false);
+    }
   };
   const handledelete = async (docId) => {
     try {
@@ -249,7 +295,6 @@ const ChatApp = () => {
     }
   };
 
- 
   return (
     <div className="flex justify-between h-screen w-screen pr-36  top-0 z-50 bg-slate-800   ">
       {/* Left Panel: Appointments */}
@@ -271,11 +316,20 @@ const ChatApp = () => {
                 onClick={() => handleSelectDoctor(doc.docData)}
               >
                 <div className="flex items-center space-x-3">
+                   <div className="relative">
                   <img
                     src={doc.docData?.image || ""}
                     alt="Doctor"
                     className="w-12 h-12 rounded-full object-cover"
                   />
+                  <span
+                    className={`absolute left-0 bottom-0 top-0 right-0 block w-3 h-3 rounded-full border-2 border-gray-900 ${doctorstatus[doc.docData._id] === "online" ? "bg-green-500" : "bg-gray-400"
+                      }`}
+                  ></span>
+                  </div>
+
+
+
                   <div className="flex-grow">
                     <p className="font-medium text-gray-300">{doc.docData?.name}</p>
                     <p className="text-sm text-gray-400">{doc.docData?.speciality}</p>
@@ -291,6 +345,7 @@ const ChatApp = () => {
               </div>
             ))}
         </div>
+
       </div>
 
       {/* Right Panel: Chat Interface */}
@@ -302,7 +357,7 @@ const ChatApp = () => {
               Chat with {selectedDoctor.name}
             </h2>
             <ScrollToBottom className="overflow-y-auto flex-grow p-2 bg-gray-700 border border-gray-400 rounded-md mb-4">
-              {messages&& Array.isArray(messages) &&
+              {messages && Array.isArray(messages) &&
                 messages.map((msg, index) => (
                   <div
                     key={index}
@@ -326,7 +381,7 @@ const ChatApp = () => {
                       />
                     }
                     {
-                    (msg.message.trim() !== "nexahealthpdf"&&msg.message.trim() !== "Noimage") &&<div className={`p-3 rounded-lg max-w-xs ${msg.senderId === userData._id
+                      (msg.message.trim() !== "nexahealthpdf" && msg.message.trim() !== "Noimage") && <div className={`p-3 rounded-lg max-w-xs ${msg.senderId === userData._id
                         ? "bg-gray-900 text-white"
                         : "bg-gray-300 text-gray-900"
                         }`}
@@ -392,6 +447,7 @@ const ChatApp = () => {
                 <Lottie
                   className="w-48 h-40 justify-self-end"
                   animationData={loaderanimation}
+                  style={{ filter: "invert(80%) sepia(100%) saturate(500%) hue-rotate(180deg)" }}
                   loop={true} />
               }
             </ScrollToBottom>
@@ -426,7 +482,7 @@ const ChatApp = () => {
                           id="image-upload"
                           hidden
                           accept="image/*"
-                          onChange={(e) => {setImage(e.target.files[0]),setShowOptions(false)}}
+                          onChange={(e) => { setImage(e.target.files[0]), setShowOptions(false) }}
                         />
                       </label>
 
@@ -441,7 +497,7 @@ const ChatApp = () => {
                           id="pdf-upload"
                           hidden
                           accept="image/*,application/pdf"
-                          onChange={(e) =>{ setPdfFile(e.target.files[0]),setShowOptions(false)}}
+                          onChange={(e) => { setPdfFile(e.target.files[0]), setShowOptions(false) }}
                         />
                       </label>
                     </div>
@@ -468,16 +524,16 @@ const ChatApp = () => {
                 )}
 
                 {/* Preview (only shown when an image is selected) */}
-               { (Image )&&<div className=" flex items-center gap-2 bg-gray-800 text-white p-2 rounded-md mr-2">
-                {Image.type.startsWith("image/") && (
-                  <img
-                    className="w-8 h-10 overflow-hidden rounded opacity-75"
-                    src={URL.createObjectURL(Image)}
-                    alt="Preview"
-                  />
-          
-                )}
-                 <button onClick={removeimageAttachment}>
+                {(Image) && <div className=" flex items-center gap-2 bg-gray-800 text-white p-2 rounded-md mr-2">
+                  {Image.type.startsWith("image/") && (
+                    <img
+                      className="w-8 h-10 overflow-hidden rounded opacity-75"
+                      src={URL.createObjectURL(Image)}
+                      alt="Preview"
+                    />
+
+                  )}
+                  <button onClick={removeimageAttachment}>
                     <FaTimes className="text-white hover:text-red-400" />
                   </button>
                 </div>}
@@ -508,6 +564,7 @@ const ChatApp = () => {
           </div>
         )}
       </div>
+
     </div>
   );
 };

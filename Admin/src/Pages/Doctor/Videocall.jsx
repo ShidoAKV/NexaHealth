@@ -1,7 +1,5 @@
 import { useRef, useEffect, useState } from "react";
 import Peer from "peerjs";
-import { FaVolumeMute } from "react-icons/fa";
-import { VscUnmute } from "react-icons/vsc";
 import { useContext } from "react";
 import { DoctorContext } from "../../Context/DoctorContext";
 import { useSearchParams } from "react-router-dom";
@@ -17,7 +15,6 @@ const Videocall = () => {
     const [peerID, setPeerID] = useState(null);
     const [remotePeerId, setRemotePeerId] = useState("");
     const [incomingCall, setIncomingCall] = useState(null);
-    const [open, setOpen] = useState(true);
     const [loading, setLoading] = useState(false);
 
     const localVideoRef = useRef(null);
@@ -71,7 +68,7 @@ const Videocall = () => {
             if (!peerID) return;
 
             const newSocket = initSocket(backendurl, { docId: ProfileData?._id, message: "make_video_call" });
-
+           
             newSocket.emit("video-initiat", {
                 docId: ProfileData._id,
                 doctorpeerId: peerID,
@@ -100,6 +97,7 @@ const Videocall = () => {
         }
     }, [dToken, ProfileData?._id, userId, backendurl, peerID]);
 
+    
     // ---------------- Call User ----------------
     const callUser = () => {
         if (!remotePeerId.trim()) {
@@ -174,11 +172,11 @@ const Videocall = () => {
         setRemotePeerId("");
         setIncomingCall(null);
         setLoading(false);
+        
         window.location.reload();
     };
 
-    const toggleAudioIcon = () => setOpen(!open);
-
+   
     return (
         <div className="flex flex-col lg:flex-row items-center justify-center p-5 gap-10 w-full min-h-screen bg-gray-100">
             {/* Remote Video */}
@@ -196,19 +194,6 @@ const Videocall = () => {
                     />
                 )}
 
-                <div className="bg-black p-2 flex items-center justify-start gap-2 rounded-b-md">
-                    {open ? (
-                        <FaVolumeMute
-                            onClick={toggleAudioIcon}
-                            className="text-white bg-blue-600 hover:bg-blue-800 p-2 rounded-full cursor-pointer w-10 h-10"
-                        />
-                    ) : (
-                        <VscUnmute
-                            onClick={toggleAudioIcon}
-                            className="text-white bg-blue-600 hover:bg-blue-800 p-2 rounded-full cursor-pointer w-10 h-10"
-                        />
-                    )}
-                </div>
             </div>
 
             {/* Sidebar */}
@@ -219,8 +204,9 @@ const Videocall = () => {
                         onClick={callUser}
                         className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-700"
                     >
-                        Call
+                        {loading?"calling...":"Call"}
                     </button>
+
                     <button
                         onClick={declineCall}
                         className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-700"

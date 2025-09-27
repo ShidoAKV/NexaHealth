@@ -5,7 +5,7 @@ import axios from "axios";
 import { useEffect } from "react";
 export const DoctorContext = createContext();
 
-const DoctorContextProvider = (props) => {
+const DoctorContextProvider = ({children}) => {
 
     const backendurl = import.meta.env.VITE_BACKEND_URL;
     const [dToken, setDToken] = useState(localStorage.getItem('dToken') || '');
@@ -147,7 +147,7 @@ const DoctorContextProvider = (props) => {
 
     return (
         <DoctorContext.Provider value={value}>
-            {props.children}
+            {children}
         </DoctorContext.Provider>
     )
 }

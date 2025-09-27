@@ -128,7 +128,7 @@ const Assistance = () => {
           ref={chatContainerRef}
           className="flex-1 overflow-y-auto p-4 space-y-4"
         >
-          {messages.map((msg, index) => (
+          {messages?.map((msg, index) => (
             <div key={index} className="flex items-start gap-2">
               {msg.sender === 'user' ? (
                 <img
@@ -152,8 +152,8 @@ const Assistance = () => {
           {loading && (
             <div className="flex items-start gap-2">
               <AiOutlineRobot className="w-8 h-8 text-blue-500" />
-              <div className="p-3 rounded-lg max-w-lg bg-gray-600">
-                <Lottie className="w-40 h-40" animationData={loaderanimation} loop />
+              <div className="p-3 rounded-lg max-w-lg ">
+                <Lottie className="w-50 h-40" animationData={loaderanimation} loop style={{ filter: "invert(45%) sepia(100%) saturate(500%) hue-rotate(180deg)" }} />
               </div>
             </div>
           )}

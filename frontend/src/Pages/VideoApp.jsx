@@ -1,7 +1,5 @@
 import { useRef, useEffect, useState } from "react";
 import Peer from "peerjs";
-import { FaVolumeMute } from "react-icons/fa";
-import { VscUnmute } from "react-icons/vsc";
 import { useContext } from "react";
 import { Appcontext } from "../Context/Context";
 import { useSearchParams } from "react-router-dom";
@@ -15,8 +13,7 @@ const VideoApp = () => {
 
     const [peerID, setPeerID] = useState(null);
     const [remotePeerId, setRemotePeerId] = useState("");
-    const [incomingCall, setIncomingCall] = useState(null); // incoming call state
-    const [open, setOpen] = useState(true);
+    const [incomingCall, setIncomingCall] = useState(null); 
     const [loading, setLoading] = useState(false);
 
     const localVideoRef = useRef(null);
@@ -25,8 +22,9 @@ const VideoApp = () => {
     const localStreamRef = useRef(null);
     const currentCallRef = useRef(null);
 
-
+ 
     // ---------------- Init Peer ----------------
+   
     useEffect(() => {
         const peer = new Peer();
 
@@ -53,11 +51,11 @@ const VideoApp = () => {
                 if (!open) alert("Please allow camera and microphone access!");
             });
 
-        // Handle incoming call
+        
         peer.on("call", (call) => {
             console.log("📞 Incoming call...");
             currentCallRef.current = call;
-            setIncomingCall(call); // show accept/decline UI
+            setIncomingCall(call); 
         });
 
         peerInstance.current = peer;
@@ -104,6 +102,8 @@ const VideoApp = () => {
 
 
 
+     
+     
     // ---------------- Call User ----------------
     const callUser = () => {
         if (!remotePeerId.trim()) {
@@ -182,10 +182,7 @@ const VideoApp = () => {
         window.location.reload();
     };
 
-    const toggleAudioIcon = () => setOpen(!open);
-
-
-
+   
 
     return (
         <div className="flex flex-col lg:flex-row items-center justify-center p-5 gap-10 w-full min-h-screen bg-gray-100">
@@ -204,19 +201,6 @@ const VideoApp = () => {
                     />
                 )}
 
-                <div className="bg-black p-2 flex items-center justify-start gap-2 rounded-b-md">
-                    {open ? (
-                        <FaVolumeMute
-                            onClick={toggleAudioIcon}
-                            className="text-white bg-blue-600 hover:bg-blue-800 p-2 rounded-full cursor-pointer w-10 h-10"
-                        />
-                    ) : (
-                        <VscUnmute
-                            onClick={toggleAudioIcon}
-                            className="text-white bg-blue-600 hover:bg-blue-800 p-2 rounded-full cursor-pointer w-10 h-10"
-                        />
-                    )}
-                </div>
             </div>
 
             {/* Sidebar */}

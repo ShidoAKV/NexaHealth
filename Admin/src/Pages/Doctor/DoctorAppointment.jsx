@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react';
+import  { useContext, useEffect } from 'react';
 import { DoctorContext } from '../../Context/DoctorContext.jsx';
 import { assets } from '../../assets/assets.js';
 import { AppContext } from '../../Context/AppContext.jsx';
@@ -12,7 +12,7 @@ const DoctorAppointment = () => {
         if (dToken) {
             getAppointments();
         }
-    }, [dToken, getAppointments]);
+    }, [dToken]);
 
     return (
         <>

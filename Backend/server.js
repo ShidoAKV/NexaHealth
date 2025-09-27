@@ -38,6 +38,11 @@ const io = new Server(server, {
 });
 
 // Middleware
+app.use(express.static("build", {
+  maxAge: "15m",   // cache static assets for 1 year
+  etag: false
+}));
+
 app.use(express.json({ limit: "10mb" }));
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
@@ -59,27 +64,51 @@ const appointmenttoSocketMap = {};
 const doctorToUsers = {};
 const userToDoctors = {};
 const videocallrequests = {};
+const onlineUsers = new Map();
+
 const getReceiverSocketId = (receiverId) => {
   return appointmenttoSocketMap[receiverId];
 };
 
+console.log(videocallrequests);
 
 
 io.on("connection", (socket) => {
   const { userId, docId, message } = socket.handshake.query;
+
   if (userId) {
     appointmenttoSocketMap[userId] = socket.id;
   }
+
   if (docId) {
+    onlineUsers.set(docId, socket.id);
     appointmenttoSocketMap[docId] = socket.id;
+    io.emit("online-users", Array.from(onlineUsers.keys()));
   }
+  
+  socket.on("online-register", ({ personId }) => {
+    if (!personId) return;
+
+    onlineUsers.set(personId, {
+      socketId: socket.id,
+      status: "online",
+    });
 
 
- if (message === "make_video_call") {
+    io.emit(
+      "online-users",
+      Array.from(onlineUsers.entries()).map(([id, data]) => ({
+        userId: id,
+        status: data.status,
+      }))
+    );
+  })
+
+  if (message === "make_video_call") {
     if (userId) videocallrequests[userId] = socket.id;
     if (docId) videocallrequests[docId] = socket.id;
   }
-  
+
   socket.on("register-chat", (data) => {
 
     if (userId && docId) {
@@ -93,6 +122,7 @@ io.on("connection", (socket) => {
       if (!userToDoctors[userId]) {
         userToDoctors[userId] = new Set();
       }
+
       userToDoctors[userId].add(docId);
 
       // Broadcast doctor's online status to every user registered with that doctor.
@@ -119,29 +149,30 @@ io.on("connection", (socket) => {
         });
       }
     }
+
   });
 
   socket.on("video-initiat", (data) => {
-    const { userId, docId,patientpeerId, doctorpeerId, direction } = data;
+    const { userId, docId, patientpeerId, doctorpeerId, direction } = data;
 
     if (direction === "user_to_doctor" && videocallrequests[docId]) {
       io.to(videocallrequests[docId]).emit("get-peerId", {
-        doctorPeerId:doctorpeerId,
-        userPeerId:patientpeerId,
+        doctorPeerId: doctorpeerId,
+        userPeerId: patientpeerId,
         message: "user_peer_id",
       });
-    }else if (direction === "doctor_to_user" && videocallrequests[userId]) {
+    } else if (direction === "doctor_to_user" && videocallrequests[userId]) {
       io.to(videocallrequests[userId]).emit("get-peerId", {
-        doctorPeerId:doctorpeerId,
-        userPeerId:patientpeerId,
+        doctorPeerId: doctorpeerId,
+        userPeerId: patientpeerId,
         message: "doctor_peer_id",
       });
     }
   });
 
- 
   socket.on("disconnect", () => {
     // console.log("User disconnected:", socket.id);
+
     let disconnectedId = null;
 
     // Find the id (user or doctor) that matches this socket.
@@ -191,10 +222,31 @@ io.on("connection", (socket) => {
         delete userToDoctors[disconnectedId];
       }
     }
+
+    let statusupdate = null;
+
+    // Find which person disconnected
+    for (const [id, data] of onlineUsers.entries()) {
+      if (data.socketId === socket.id) {
+        statusupdate = id;
+        // Instead of removing, mark as offline
+        onlineUsers.set(id, { socketId: null, status: "offline" });
+        break;
+      }
+    }
+
+    if (statusupdate) {
+      io.emit(
+        "online-users",
+        Array.from(onlineUsers.entries()).map(([id, data]) => ({
+          userId: id,
+          status: data.status,
+        }))
+      );
+    }
   });
+
 });
-
-
 
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
