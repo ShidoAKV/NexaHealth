@@ -113,7 +113,7 @@ const MyAppointment = () => {
         </p>
 
         <div className="mt-4">
-          <Suspense fallback={<p className='bg-red-500'>Loading appointments...</p>}>
+          <Suspense fallback={<p>.</p>}>
             {appointments?.map((items, index) => (
               <AppointmentCard
                 key={index}

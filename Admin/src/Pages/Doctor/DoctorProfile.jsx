@@ -37,7 +37,7 @@ const DoctorProfile = () => {
     if (dToken) {
       getProfileData();
     }
-  }, []);
+  }, [dToken]);
 
   const handleInputChange = (field, value) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));

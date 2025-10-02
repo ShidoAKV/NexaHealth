@@ -70,7 +70,6 @@ const getReceiverSocketId = (receiverId) => {
   return appointmenttoSocketMap[receiverId];
 };
 
-console.log(videocallrequests);
 
 
 io.on("connection", (socket) => {

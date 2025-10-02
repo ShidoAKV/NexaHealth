@@ -22,7 +22,6 @@ const VideoApp = () => {
     const localStreamRef = useRef(null);
     const currentCallRef = useRef(null);
 
- 
     // ---------------- Init Peer ----------------
    
     useEffect(() => {

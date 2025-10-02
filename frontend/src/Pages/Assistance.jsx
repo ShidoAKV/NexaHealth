@@ -40,7 +40,7 @@ const Assistance = () => {
         { headers: { token } }
       );
 
-       console.log(data);
+      //  console.log(data);
       if (data.success) {
         if (data.symptoms?.length > 0) {
           // Medical response

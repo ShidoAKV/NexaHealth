@@ -302,6 +302,7 @@ const ChatApp = () => {
         <h2 className="text-xl font-semibold mb-4 text-center text-white">
           My Appointments
         </h2>
+
         <div className="overflow-y-auto max-h-full  ">
           {appointments
             .filter(
@@ -316,16 +317,17 @@ const ChatApp = () => {
                 onClick={() => handleSelectDoctor(doc.docData)}
               >
                 <div className="flex items-center space-x-3">
-                   <div className="relative">
-                  <img
-                    src={doc.docData?.image || ""}
-                    alt="Doctor"
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <span
-                    className={`absolute left-0 bottom-0 top-0 right-0 block w-3 h-3 rounded-full border-2 border-gray-900 ${doctorstatus[doc.docData._id] === "online" ? "bg-green-500" : "bg-gray-400"
-                      }`}
-                  ></span>
+                  <div className="relative">
+                    <img
+                      src={doc.docData?.image || ""}
+                      alt="Doctor"
+                      className=" w-8 h-12 rounded-full object-cover"
+                    />
+
+                    <span
+                      className={`absolute left-0 bottom-0 top-0 right-0 block w-3 h-3 rounded-full border-2 border-gray-900 ${doctorstatus[doc.docData._id] === "online" ? "bg-green-500" : "bg-gray-400"
+                        }`}
+                    ></span>
                   </div>
 
 
