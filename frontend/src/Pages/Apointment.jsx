@@ -9,7 +9,7 @@ import axios from "axios";
 const Appointment = () => {
   const navigate = useNavigate();
   const { docId } = useParams();
-  const { doctors, currencySymbol, backendurl, token, getDoctorData } = useContext(Appcontext);
+  const { doctors, currencySymbol, backendurl, token, getDoctorData,setLoading } = useContext(Appcontext);
   const daysofweek = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const [docInfo, setdocInfo] = useState(null);
   const [docSlots, setdocSlots] = useState([]);
@@ -86,6 +86,8 @@ const Appointment = () => {
     }
 
     try {
+       setLoading(true);
+
       const date = docSlots[slotIndex][0].datetime;
       const day = date.getDate();
       const month = date.getMonth() + 1;
@@ -98,16 +100,19 @@ const Appointment = () => {
         { headers: { token } }
       );
 
-      console.log(data);
+      // console.log(data);
 
       if (data.success) {
         toast.success(data.message);
         getDoctorData();
+        setLoading(false);
         navigate("/my-appointments");
       } else {
+        setLoading(false);
         toast.error(data.message);
       }
     } catch (error) {
+      setLoading(false);
       console.log(error.message);
       toast.error(error.message);
     }
