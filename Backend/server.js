@@ -92,7 +92,7 @@ io.on("connection", (socket) => {
 
   if (notificationdata && userId) {
     notificationOnlineUsers.set(userId, socket.id);
-    // console.log(`🟢 Notification socket registered for user ${userId}`);
+    console.log(`🟢 Notification socket registered for user ${userId}`);
   }
 
 
@@ -185,16 +185,19 @@ io.on("connection", (socket) => {
   });
 
   socket.on("removeUser", (userId) => {
-    notificationOnlineUsers.delete(userId);
-    console.log(`❌ User ${userId} disconnected`);
+    if (notificationOnlineUsers.has(userId)) {
+      console.log('remove function called', userId);
+
+      notificationOnlineUsers.delete(userId);
+    }
   });
 
+
   socket.on("disconnect", () => {
-    // console.log("User disconnected:", socket.id);
 
     let disconnectedId = null;
 
-    // Find the id (user or doctor) that matches this socket.
+    // 1️⃣ Find the user/doctor ID linked to this socket
     for (const [id, sId] of Object.entries(appointmenttoSocketMap)) {
       if (sId === socket.id) {
         disconnectedId = id;
@@ -203,25 +206,34 @@ io.on("connection", (socket) => {
       }
     }
 
+    // 2️⃣ Also remove from video call map if exists
     for (const [id, sId] of Object.entries(videocallrequests)) {
       if (sId === socket.id) {
         delete videocallrequests[id];
         break;
       }
     }
-    // for (const key of Object.keys(videoPeerMap)) {
-    //   if (key.includes(disconnectedId)) {
-    //     delete videoPeerMap[key];
-    //   }
-    // }
+
+    // 3️⃣ Remove from notification socket map if exists
+
+    for (const [id, sId] of notificationOnlineUsers.entries()) {
+      if (sId === socket.id) {
+        notificationOnlineUsers.delete(id);
+        console.log(`🔴 Removed ${id} from notificationOnlineUsers`);
+        break;
+      }
+    }
 
 
+
+    // 4️⃣ Handle status updates (doctor ↔ users)
     if (disconnectedId) {
-      // If the disconnected id is a doctor, broadcast offline to all paired users.
+      // If doctor disconnected → mark offline for all users who had them
       if (doctorToUsers[disconnectedId]) {
         doctorToUsers[disconnectedId].forEach((uid) => {
-          if (appointmenttoSocketMap[uid]) {
-            io.to(appointmenttoSocketMap[uid]).emit("status-update", {
+          const socketId = appointmenttoSocketMap[uid];
+          if (socketId) {
+            io.to(socketId).emit("status-update", {
               userId: disconnectedId,
               status: "offline",
             });
@@ -229,11 +241,13 @@ io.on("connection", (socket) => {
         });
         delete doctorToUsers[disconnectedId];
       }
-      // If the disconnected id is a user, broadcast offline to all paired doctors.
+
+      // If user disconnected → mark offline for all their doctors
       if (userToDoctors[disconnectedId]) {
         userToDoctors[disconnectedId].forEach((did) => {
-          if (appointmenttoSocketMap[did]) {
-            io.to(appointmenttoSocketMap[did]).emit("status-update", {
+          const socketId = appointmenttoSocketMap[did];
+          if (socketId) {
+            io.to(socketId).emit("status-update", {
               userId: disconnectedId,
               status: "offline",
             });
@@ -243,20 +257,18 @@ io.on("connection", (socket) => {
       }
     }
 
-    let statusupdate = null;
-
-    // Find which person disconnected
+    // 5️⃣ Update global online users list cleanly
+    let updated = false;
     for (const [id, data] of onlineUsers.entries()) {
       if (data.socketId === socket.id) {
-        statusupdate = id;
-        // Instead of removing, mark as offline
         onlineUsers.set(id, { socketId: null, status: "offline" });
+        updated = true;
         break;
       }
     }
 
-
-    if (statusupdate) {
+    // 6️⃣ Emit updated online users list if needed
+    if (updated) {
       io.emit(
         "online-users",
         Array.from(onlineUsers.entries()).map(([id, data]) => ({
@@ -267,13 +279,14 @@ io.on("connection", (socket) => {
     }
   });
 
+
 });
 
 
-cron.schedule("* * * * * *", async () => {
+cron.schedule("0 */6 * * *", async () => {
 
   const appointments = await appointmentModel.find({
-    payment:true
+    payment: true
   }).populate("userId docData");
 
   for (const appt of appointments) {
@@ -281,11 +294,15 @@ cron.schedule("* * * * * *", async () => {
     const today = moment().startOf("day");
     const daysLeft = appointmentDate.diff(today, "days");
     const socketId = notificationOnlineUsers.get(appt.userId.toString());
-      
+
     // Condition: appointment is in future or today, payment done, and not yet notified
-    
-    if (daysLeft >= 0 && appt.payment && appt.notificationSent===false) {
+      // console.log(socketId);
+    //  console.log(notificationOnlineUsers);
+
+
+    if (daysLeft >= 0 && appt.payment && appt.notificationSent === false ) {
       if (socketId) {
+         
         io.to(socketId).emit("appointmentNotification", {
           title: "Appointment Reminder",
           message:
@@ -294,13 +311,10 @@ cron.schedule("* * * * * *", async () => {
               : `Your appointment with Dr. ${appt.docData?.name} is in ${daysLeft} day(s).`,
           appointmentId: appt._id,
         });
-
         // console.log(`📨 Notification sent to user ${appt.userId}`);
       }
-    } else if (daysLeft < 0) {
-      // Appointment date has passed → clean up
-      notificationOnlineUsers.delete(appt.userId.toString());
-
+    } else {
+     
       // Mark notificationSent true if still false
       if (!appt.notificationSent) {
         await appointmentModel.updateOne(

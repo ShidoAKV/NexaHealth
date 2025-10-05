@@ -199,7 +199,7 @@ const bookAppointment = async (req, res) => {
       userId,
       docId,
       userData,
-      docData: { ...docData.toObject(), slots_booked: undefined }, // Avoid including `slots_booked`
+      docData: { ...docData.toObject(), slots_booked: undefined }, 
       amount: docData.fees,
       slotTime,
       slotDate,
