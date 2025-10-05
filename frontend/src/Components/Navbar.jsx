@@ -77,7 +77,7 @@ const Navbar = () => {
            
           </div>
            <Lottie
-            className="w-10 cursor-pointer h-10 ml-40 lg:ml-0 lg:mr-10 justify-end"
+            className="w-10 h-10 cursor-pointer ml-20 sm:ml-28 md:ml-32 lg:ml-0 lg:mr-10 flex justify-end"
             animationData={notification}
             loop={true}
             onClick={()=>navigate('/notification')}

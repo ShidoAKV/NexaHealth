@@ -295,34 +295,47 @@ const getuserprescriptionhistory = async (req, res) => {
 
 
 // Api for  notiification
+
 const getNotification = async (req, res) => {
   try {
-    const { userId }=await req.params;
+    const { userId } = req.params; 
+    const today = moment().startOf("day").toDate();
 
-    if (!userId) {
-      return res.status(400).json({ success: false, message: "UserId is required" });
-    }
     
-    // const today = moment().startOf("day").toDate();
+    const appointments = await appointmentModel
+      .find({
+        userId,
+        payment: true,
+        cancelled: false,
+        isCompleted: false,
+        slotDate: { $exists: true },
+      })
+      .populate("docData")
+      .lean();
 
-    const appointments = await appointmentModel.find({
-      userId,
-      payment: true,          
-    }).populate("docData");
+    // Filter out only upcoming or today appointments
+    const filteredAppointments = appointments.filter((appt) => {
+      const appointmentDate = moment(appt.slotDate, "D_M_YYYY").startOf("day").toDate();
+      return appointmentDate >= today;
+    });
 
-    // if (!appointments || appointments.length === 0) {
-    //   return res.json({ success: false, message: "No upcoming paid appointments found" });
-    // }
+    // Sort by date ascending
+    filteredAppointments.sort((a, b) => {
+      const dateA = moment(a.slotDate, "D_M_YYYY").toDate();
+      const dateB = moment(b.slotDate, "D_M_YYYY").toDate();
+      return dateA - dateB;
+    });
 
-    return res.json({ success: true, appointments });
+    if (filteredAppointments.length === 0) {
+      return res.json({ success: false, message: "No upcoming notifications found" });
+    }
+
+    return res.json({ success: true, appointments: filteredAppointments });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ success: false, error: error.message });
+    console.error("Error fetching notifications:", error);
+    return res.status(500).json({ success: false, message: "Server error", error });
   }
 };
-
-
-
 
 //Api to make payment of appointment using razorpay
 
