@@ -4,7 +4,6 @@ import { toast } from "react-toastify";
 
 export const Appcontext = createContext();
 
-
 const Appcontextprovider = ({children}) => {
   const currencySymbol = "$";
   const backendurl = import.meta.env.VITE_BACKEND_URL;
@@ -16,21 +15,28 @@ const Appcontextprovider = ({children}) => {
   const [userData, setUserData] = useState();
   const [loading, setLoading] = useState(false);
 
+
+
   const getDoctorData = async () => {
     try {
+       setLoading(true);
       const { data } = await axios.get(`${backendurl}/api/doctor/list`);
       if (data.success) {
-        setdoctors(data.doctors);
+         setLoading(false);
+         setdoctors(data.doctors);
       } else {
+         setLoading(true);
         toast.error(data.message);
       }
     } catch (error) {
+       setLoading(true);
       toast.error(error.message);
     }
   };
 
   const loadProfileData = async () => {
     try {
+      setLoading(true);
       const { data } = await axios.get(`${backendurl}/api/user/get-profile`, {
         headers: { token },
       });
@@ -47,10 +53,13 @@ const Appcontextprovider = ({children}) => {
           address: newaddress,
         };
         setUserData(newUserData);
+         setLoading(false);
       } else {
+         setLoading(false);
         toast.error(data.message);
       }
     } catch (error) {
+       setLoading(false);
       toast.error(error.message);
     }
   };
@@ -69,6 +78,8 @@ const Appcontextprovider = ({children}) => {
     setLoading
   };
 
+
+
   useEffect(() => {
     getDoctorData();
   }, []);
@@ -81,6 +92,10 @@ const Appcontextprovider = ({children}) => {
     }
     
   }, [token]);
+
+
+
+
 
   return (
     <Appcontext.Provider value={value}>

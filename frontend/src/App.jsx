@@ -19,6 +19,7 @@ import Prescription from './Pages/Prescription';
 import GlobalLoader from './config/Loader';
 import { useContext } from 'react';
 import { Appcontext } from './Context/Context';
+import Notification from './Pages/Notification';
 
 const App = () => {
   const { loading } = useContext(Appcontext);
@@ -43,7 +44,8 @@ const App = () => {
         <Route path='/doctor-chat' element={<ChatApp />} />
         <Route path='/videocall' element={<VideoApp/>} />
         <Route path='/ai-assistance' element={<Assistance/>} />
-         <Route path='/my-prescription' element={<Prescription/>} />
+        <Route path='/Notification' element={<Notification/>} />
+        <Route path='/my-prescription' element={<Prescription/>} />
       </Routes>
       {/* <Footer/> */}
 

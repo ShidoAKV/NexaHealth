@@ -10,6 +10,9 @@ import userRouter from "./Routes/UserRoute.js";
 import { Server } from "socket.io";
 import { createServer } from "http";
 import chatRouter from "./Routes/ChatRoute.js";
+import cron from 'node-cron';
+import { appointmentModel } from "./Models/AppointmentModel.js";
+import moment from "moment";
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -58,6 +61,7 @@ app.get("/home", (req, res) => {
   res.send("Server is up and running!");
 });
 
+
 // Socket.io logic
 
 const appointmenttoSocketMap = {};
@@ -65,6 +69,7 @@ const doctorToUsers = {};
 const userToDoctors = {};
 const videocallrequests = {};
 const onlineUsers = new Map();
+const notificationOnlineUsers = new Map();
 
 const getReceiverSocketId = (receiverId) => {
   return appointmenttoSocketMap[receiverId];
@@ -73,7 +78,7 @@ const getReceiverSocketId = (receiverId) => {
 
 
 io.on("connection", (socket) => {
-  const { userId, docId, message } = socket.handshake.query;
+  const { userId, docId, message, notificationdata } = socket.handshake.query;
 
   if (userId) {
     appointmenttoSocketMap[userId] = socket.id;
@@ -84,7 +89,13 @@ io.on("connection", (socket) => {
     appointmenttoSocketMap[docId] = socket.id;
     io.emit("online-users", Array.from(onlineUsers.keys()));
   }
-  
+
+  if (notificationdata && userId) {
+    notificationOnlineUsers.set(userId, socket.id);
+    // console.log(`🟢 Notification socket registered for user ${userId}`);
+  }
+
+
   socket.on("online-register", ({ personId }) => {
     if (!personId) return;
 
@@ -101,7 +112,11 @@ io.on("connection", (socket) => {
         status: data.status,
       }))
     );
+
+
   })
+
+
 
   if (message === "make_video_call") {
     if (userId) videocallrequests[userId] = socket.id;
@@ -169,6 +184,11 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("removeUser", (userId) => {
+    notificationOnlineUsers.delete(userId);
+    console.log(`❌ User ${userId} disconnected`);
+  });
+
   socket.on("disconnect", () => {
     // console.log("User disconnected:", socket.id);
 
@@ -194,6 +214,7 @@ io.on("connection", (socket) => {
     //     delete videoPeerMap[key];
     //   }
     // }
+
 
     if (disconnectedId) {
       // If the disconnected id is a doctor, broadcast offline to all paired users.
@@ -234,6 +255,7 @@ io.on("connection", (socket) => {
       }
     }
 
+
     if (statusupdate) {
       io.emit(
         "online-users",
@@ -246,6 +268,50 @@ io.on("connection", (socket) => {
   });
 
 });
+
+
+cron.schedule("0 0 */6 * * *", async () => {
+
+  const appointments = await appointmentModel.find({
+    payment:true
+  }).populate("userId docData");
+
+  for (const appt of appointments) {
+    const appointmentDate = moment(appt.slotDate, "D_M_YYYY");
+    const today = moment().startOf("day");
+    const daysLeft = appointmentDate.diff(today, "days");
+    const socketId = notificationOnlineUsers.get(appt.userId.toString());
+      
+    // Condition: appointment is in future or today, payment done, and not yet notified
+    
+    if (daysLeft >= 0 && appt.payment && appt.notificationSent===false) {
+      if (socketId) {
+        io.to(socketId).emit("appointmentNotification", {
+          title: "Appointment Reminder",
+          message:
+            daysLeft === 0
+              ? `Your appointment with Dr. ${appt.docData?.name} is today at ${appt.slotTime}.`
+              : `Your appointment with Dr. ${appt.docData?.name} is in ${daysLeft} day(s).`,
+          appointmentId: appt._id,
+        });
+
+        // console.log(`📨 Notification sent to user ${appt.userId}`);
+      }
+    } else if (daysLeft < 0) {
+      // Appointment date has passed → clean up
+      notificationOnlineUsers.delete(appt.userId.toString());
+
+      // Mark notificationSent true if still false
+      if (!appt.notificationSent) {
+        await appointmentModel.updateOne(
+          { _id: appt._id },
+          { $set: { notificationSent: true } }
+        );
+      }
+    }
+  }
+});
+
 
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);

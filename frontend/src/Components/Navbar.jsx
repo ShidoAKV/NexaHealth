@@ -1,21 +1,25 @@
 import React, { useContext, useState } from 'react';
-import { assets } from '../assets/assets';
+import { assets } from '../assets/assets.js';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Appcontext } from '../Context/Context.jsx';
+// import { IoIosNotificationsOutline } from "react-icons/io";
+import notification from '../../public/Notification.json'
+import Lottie from 'lottie-react';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
-  const {token,setToken,userData}=useContext(Appcontext)
-  
-  
-  const logout=()=>{
-    setToken(false) ;  
+  const { token, setToken, userData } = useContext(Appcontext)
+ 
+  const logout = () => {
+    setToken(false);
     localStorage.removeItem('token');
   }
+
   return (
     <nav className="w-full bg-white shadow-md ">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0 cursor-pointer">
@@ -70,12 +74,26 @@ const Navbar = () => {
             >
               Contact
             </NavLink>
-
+           
           </div>
+           <Lottie
+            className="w-10 cursor-pointer h-10 ml-40 lg:ml-0 lg:mr-10 justify-end"
+            animationData={notification}
+            loop={true}
+            onClick={()=>navigate('/notification')}
+            />
+
+
+          {/* <IoIosNotificationsOutline
+              className="w-6 h-6 right-0 md:mr-12 cursor-pointer hover:text-primary"
+              onClick={()=>navigate('/Notification')}
+           /> */}
+          
+
 
           {/* User Menu or Login Button */}
           <div className="flex items-center gap-4">
-            {token&&userData ? (
+            {token && userData ? (
               <div className="relative group">
                 <div className="flex items-center gap-2 cursor-pointer">
                   <img
@@ -134,6 +152,7 @@ const Navbar = () => {
               alt="menu icon"
             />
           </div>
+
         </div>
       </div>
 
@@ -141,7 +160,7 @@ const Navbar = () => {
       {showMenu && (
         <div className="fixed inset-0 bg-white z-20 md:hidden">
           <div className="flex items-center justify-between p-4 border-b">
-          <img className="h-8" src='logo.png' alt="logo" />
+            <img className="h-8" src='logo.png' alt="logo" />
             <img
               onClick={() => setShowMenu(false)}
               className="w-10 h-8 cursor-pointer"

@@ -8,6 +8,8 @@ import { appointmentModel } from '../Models/AppointmentModel.js';
 import razorpay from 'razorpay';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FormModel } from '../Models/FormModel.js';
+import moment from "moment";
+
 /*
  Api for user to register,payment,profile change,login etc
 */
@@ -291,6 +293,37 @@ const getuserprescriptionhistory = async (req, res) => {
     }
 }
 
+
+// Api for  notiification
+const getNotification = async (req, res) => {
+  try {
+    const { userId }=await req.params;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "UserId is required" });
+    }
+    
+    // const today = moment().startOf("day").toDate();
+
+    const appointments = await appointmentModel.find({
+      userId,
+      payment: true,          
+    }).populate("docData");
+
+    // if (!appointments || appointments.length === 0) {
+    //   return res.json({ success: false, message: "No upcoming paid appointments found" });
+    // }
+
+    return res.json({ success: true, appointments });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+
+
+
 //Api to make payment of appointment using razorpay
 
 const razorpayInstance = new razorpay(
@@ -344,7 +377,6 @@ const verifyRazorpay = async (req, res) => {
   try {
     const { razorpay_order_id } = req.body;
     //  console.log(req.body);
-
 
     if (!razorpay_order_id) {
       return res.json({ success: false, message: 'Order ID is missing in response' });
@@ -506,5 +538,5 @@ export {
   registerUser, loginUser, getProfile,
   updateProfile, bookAppointment, listAppointment,
   cancelAppointment, paymentRazorpay, verifyRazorpay, AssistanceResponse
-  ,getuserprescriptionhistory
+  ,getuserprescriptionhistory,getNotification
 };
