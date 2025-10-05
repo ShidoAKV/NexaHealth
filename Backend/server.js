@@ -270,7 +270,7 @@ io.on("connection", (socket) => {
 });
 
 
-cron.schedule("0 0 */6 * * *", async () => {
+cron.schedule("* * * * * *", async () => {
 
   const appointments = await appointmentModel.find({
     payment:true
