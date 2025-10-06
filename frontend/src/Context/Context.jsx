@@ -19,24 +19,19 @@ const Appcontextprovider = ({children}) => {
 
   const getDoctorData = async () => {
     try {
-       setLoading(true);
       const { data } = await axios.get(`${backendurl}/api/doctor/list`);
       if (data.success) {
-         setLoading(false);
          setdoctors(data.doctors);
       } else {
-         setLoading(true);
         toast.error(data.message);
       }
     } catch (error) {
-       setLoading(true);
       toast.error(error.message);
     }
   };
 
   const loadProfileData = async () => {
     try {
-      setLoading(true);
       const { data } = await axios.get(`${backendurl}/api/user/get-profile`, {
         headers: { token },
       });
@@ -53,13 +48,10 @@ const Appcontextprovider = ({children}) => {
           address: newaddress,
         };
         setUserData(newUserData);
-         setLoading(false);
       } else {
-         setLoading(false);
         toast.error(data.message);
       }
     } catch (error) {
-       setLoading(false);
       toast.error(error.message);
     }
   };
