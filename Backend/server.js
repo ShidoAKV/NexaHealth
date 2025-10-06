@@ -283,7 +283,7 @@ io.on("connection", (socket) => {
 });
 
 //0 */6 * * *
-cron.schedule("* * * * * *", async () => {
+cron.schedule("0 */6 * * *", async () => {
 
   const appointments = await appointmentModel.find({
     payment: true
