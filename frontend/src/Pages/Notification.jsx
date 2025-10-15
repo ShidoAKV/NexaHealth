@@ -21,6 +21,8 @@ const Notification = () => {
                 if (data.success) {
                     setNotifications(data.appointments);
                     setLoading(false);
+                }else{
+                    setLoading(false);
                 }
             } catch (error) {
                 setLoading(false);
