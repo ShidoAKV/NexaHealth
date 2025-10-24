@@ -17,9 +17,11 @@ const Notification = () => {
                     `${backendurl}/api/user/notification/${userData?._id}`,
                     { headers: { token } }
                 );
-
+                 
                 if (data.success) {
                     setNotifications(data.appointments);
+                    setLoading(false);
+                }else{
                     setLoading(false);
                 }
             } catch (error) {

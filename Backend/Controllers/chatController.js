@@ -10,7 +10,6 @@ const chatCache = new NodeCache({
   checkperiod:60
 })
 
-
 const sendChat = async (req, res) => {
   const { senderId, receiverId, message, image } = req.body;
     

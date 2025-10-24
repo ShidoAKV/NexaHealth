@@ -45,7 +45,7 @@ app.use(express.static("build", {
   maxAge: "15m",   // cache static assets for 1 year
   etag: false
 }));
-
+app.set('trust proxy', 1);
 app.use(express.json({ limit: "10mb" }));
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
@@ -74,7 +74,6 @@ const notificationOnlineUsers = new Map();
 const getReceiverSocketId = (receiverId) => {
   return appointmenttoSocketMap[receiverId];
 };
-
 
 
 io.on("connection", (socket) => {
@@ -115,7 +114,6 @@ io.on("connection", (socket) => {
 
 
   })
-
 
 
   if (message === "make_video_call") {
@@ -186,7 +184,7 @@ io.on("connection", (socket) => {
 
   socket.on("removeUser", (userId) => {
     if (notificationOnlineUsers.has(userId)) {
-      console.log('remove function called', userId);
+      // console.log('remove function called', userId);
 
       notificationOnlineUsers.delete(userId);
     }
@@ -219,7 +217,7 @@ io.on("connection", (socket) => {
     for (const [id, sId] of notificationOnlineUsers.entries()) {
       if (sId === socket.id) {
         notificationOnlineUsers.delete(id);
-        console.log(`🔴 Removed ${id} from notificationOnlineUsers`);
+        // console.log(`🔴 Removed ${id} from notificationOnlineUsers`);
         break;
       }
     }
