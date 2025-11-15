@@ -19,17 +19,13 @@ const Appcontextprovider = ({children}) => {
 
   const getDoctorData = async () => {
     try {
-       setLoading(true);
       const { data } = await axios.get(`${backendurl}/api/doctor/list`);
       if (data.success) {
-         setLoading(false);
          setdoctors(data.doctors);
       } else {
-         setLoading(true);
         toast.error(data.message);
       }
     } catch (error) {
-       setLoading(true);
       toast.error(error.message);
     }
   };
